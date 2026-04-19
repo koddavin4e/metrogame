@@ -14,10 +14,7 @@ public class InventorySystem {
     private int selectedWeaponSlot;
 
     public InventorySystem() {
-        weaponSlots[0] = WeaponType.RUSTY_SWORD;
-        weaponSlots[1] = WeaponType.IRON_SWORD;
-        weaponSlots[2] = WeaponType.HEAVY_AXE;
-        weaponSlots[3] = WeaponType.SPEAR;
+        // Start as a clean prototype: no weapons, no loot, just an empty bag.
     }
 
     public void addItem(String name, int amount) {
@@ -54,9 +51,7 @@ public class InventorySystem {
         if (slotIndex < 0 || slotIndex >= weaponSlots.length) {
             return;
         }
-        if (weaponSlots[slotIndex] != null) {
-            selectedWeaponSlot = slotIndex;
-        }
+        selectedWeaponSlot = slotIndex;
     }
 
     public int getSelectedWeaponSlot() {

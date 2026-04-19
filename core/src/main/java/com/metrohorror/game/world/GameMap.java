@@ -11,12 +11,6 @@ public class GameMap {
     public GameMap() {
         ground = new Rectangle(0, Constants.GROUND_Y, Constants.WORLD_WIDTH, Constants.GROUND_HEIGHT);
         platforms = new Array<>();
-
-        platforms.add(new Platform(350, 220, 180, 20));
-        platforms.add(new Platform(700, 300, 180, 20));
-        platforms.add(new Platform(1050, 250, 200, 20));
-        platforms.add(new Platform(1450, 360, 220, 20));
-        platforms.add(new Platform(1850, 280, 200, 20));
     }
 
     public Rectangle getGround() {

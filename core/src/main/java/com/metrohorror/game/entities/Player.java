@@ -84,6 +84,10 @@ public final class Player {
         return velocityY;
     }
 
+    public float getVelocityX() {
+        return velocityX;
+    }
+
     public void setVelocityY(float velocityY) {
         this.velocityY = velocityY;
     }
