@@ -1,6 +1,7 @@
 package com.metrohorror.game.entities;
 
 public enum WeaponType {
+    BASIC_KNIFE("Базовый нож", 1, 46f, 5f, 0.16f, 0.78f, 0.84f, 0.86f),
     RUSTY_SWORD("Rusty Sword", 1, 56f, 8f, 0.22f, 0.82f, 0.82f, 0.86f),
     IRON_SWORD("Iron Sword", 2, 72f, 10f, 0.2f, 0.75f, 0.85f, 1f),
     HEAVY_AXE("Heavy Axe", 3, 60f, 14f, 0.34f, 0.82f, 0.45f, 0.3f),

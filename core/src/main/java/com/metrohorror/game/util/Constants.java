@@ -8,6 +8,7 @@ public class Constants {
 
     public static final float PLAYER_WIDTH = 40f;
     public static final float PLAYER_HEIGHT = 60f;
+    public static final int PLAYER_MAX_HEALTH = 100;
     public static final float PLAYER_SPEED = 300f;
     public static final float PLAYER_JUMP_POWER = 560f;
     public static final float GRAVITY = -1200f;

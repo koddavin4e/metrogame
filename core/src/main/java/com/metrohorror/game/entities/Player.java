@@ -10,7 +10,7 @@ public final class Player {
     private float velocityY;
     private boolean onGround;
     private boolean facingRight = true;
-    private int health = 10;
+    private int health = Constants.PLAYER_MAX_HEALTH;
     private float damageFlashTimer;
 
     private final Rectangle bounds;
@@ -92,6 +92,11 @@ public final class Player {
         this.velocityY = velocityY;
     }
 
+    public void bounceFromEnemy() {
+        velocityY = Constants.PLAYER_JUMP_POWER * 0.72f;
+        onGround = false;
+    }
+
     public boolean isOnGround() {
         return onGround;
     }
@@ -111,6 +116,15 @@ public final class Player {
     public void takeDamage(int damage) {
         health = Math.max(0, health - damage);
         damageFlashTimer = 0.18f;
+    }
+
+    public void heal(int amount) {
+        health = Math.min(Constants.PLAYER_MAX_HEALTH, health + amount);
+    }
+
+    public void healToFull() {
+        health = Constants.PLAYER_MAX_HEALTH;
+        damageFlashTimer = 0f;
     }
 
     public boolean isAlive() {
