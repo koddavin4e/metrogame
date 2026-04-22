@@ -7,8 +7,11 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -21,6 +24,8 @@ import com.metrohorror.game.MetroHorrorGame;
 import com.metrohorror.game.entities.Enemy;
 import com.metrohorror.game.entities.Player;
 import com.metrohorror.game.entities.WeaponType;
+import com.metrohorror.game.screen.dialogue.DialogueScripts;
+import com.metrohorror.game.screen.location.LocationId;
 import com.metrohorror.game.systems.CameraSystem;
 import com.metrohorror.game.systems.InventorySystem;
 import com.metrohorror.game.ui.InventoryUI;
@@ -44,77 +49,30 @@ public class FirstScreen implements Screen {
     private static final float BEDROOM_RIGHT_WALL = 1240f;
     private static final float BEDROOM_PLAYER_X = 235f;
     private static final float TYPE_SPEED = 42f;
-    private static final float KNIFE_SWING_TIME = 0.24f;
     private static final int KNIFE_DAMAGE = 2;
-    private static final int STOMP_DAMAGE = 2;
     private static final int KILL_HEAL_AMOUNT = 5;
+    private static final float DOWN_ATTACK_BOUNCE = 520f;
     private static final float RESPAWN_X_OFFSET = 120f;
     private static final float PAUSE_MENU_WIDTH = 360f;
     private static final float PAUSE_BUTTON_HEIGHT = 54f;
     private static final float PAUSE_BUTTON_GAP = 14f;
+    private static final float INVENTORY_PANEL_WIDTH = 700f;
+    private static final float INVENTORY_PANEL_HEIGHT = 456f;
+    private static final float INVENTORY_SLOT_SIZE = 50f;
+    private static final float INVENTORY_SLOT_GAP = 10f;
+    private static final int INVENTORY_BAG_COLUMNS = 4;
+    private static final int HERO_FRAME_SIZE = 128;
+    private static final int HERO_FRAME_COUNT = 17;
+    private static final float HERO_BODY_DRAW_WIDTH = 88f;
+    private static final float HERO_ATTACK_DRAW_WIDTH = 136f;
+    private static final float HERO_DRAW_HEIGHT = 96f;
     private static final int SAVE_SLOT_COUNT = 3;
     private static final String SAVE_PREFERENCES = "metrohorror-saves";
     private static final String[] PAUSE_BUTTON_LABELS = {
-            "Выйти в меню",
-            "Достижения",
-            "Настройки",
-            "Продолжить"
-    };
-
-    private static final String[] PROLOGUE_SPEAKERS = {
-            "100 лет назад",
-            "Люцифер",
-            "Ученый",
-            "Ангельский двигатель",
-            "100 лет спустя",
-            "Священная книга"
-    };
-    private static final String[] PROLOGUE_TITLES = {
-            "Запретная просьба",
-            "Сделка с Люцифером",
-            "Похищение ангела",
-            "Рождение двигателя",
-            "Сто лет голода",
-            "Пророчество"
-    };
-    private static final String[] PROLOGUE_TEXT = {
-            "Мир умирал от голода. Один ученый нашел запретную книгу и попросил у нее пищу, свет и бесконечную энергию.",
-            "Из красной тени вышел Люцифер. Он не дал чудо бесплатно: за спасение людей ученый должен был помочь украсть ангела.",
-            "Ночью они поднялись к небесным вратам, сорвали ангела с цепи света и увели его в подземную лабораторию.",
-            "Ангела закрыли в капсуле. Его крылья стали топливом, а молитвы стали проводами. Так появился Ангельский двигатель.",
-            "Сто лет двигатель кормил города. Потом свет погас, машины остановились, и голод вернулся еще страшнее.",
-            "В ту ночь родился слепой мальчик из пророчества. Его имя скрыли, потому что имя может открыть дорогу искушению."
-    };
-
-    private static final String[] CHAPEL_SPEAKERS = {
-            "Ученый",
-            "???",
-            "Ученый",
-            "Ученый"
-    };
-    private static final String[] CHAPEL_TEXT = {
-            "Просыпайся. Повязку не снимай: твои глаза видят то, что не должен видеть ни один человек.",
-            "Во сне я слышал крылья под рельсами. Кто-то бился в клетке и звал меня по имени... но я его не помню.",
-            "Это ангел внутри двигателя. Когда-то я помог Люциферу украсть его, а теперь двигатель умирает вместе с миром.",
-            "Иди к запертой двери. На нижней линии ты увидишь клетку, из-за которой небо и ад начали охоту."
-    };
-
-    private static final String[] ENGINE_SPEAKERS = {
-            "Ангельский двигатель",
-            "???",
-            "Ангельский двигатель"
-    };
-    private static final String[] ENGINE_TEXT = {
-            "Слепой ребенок пророчества... я не враг. Я тот, кого превратили в сердце этой машины.",
-            "Это ты говорил со мной во сне?",
-            "Да. Иди по красным рельсам. Люцифер знает твое лицо, но пока не знает твое имя."
-    };
-
-    private static final String[] TRASH_SPEAKERS = {
-            "???"
-    };
-    private static final String[] TRASH_TEXT = {
-            "Следуя указанию свыше, вы внезапно спотыкаетесь о груду мусора и падаете прямо на осколки стекла. Рука натыкается на что-то острое — предмет, похожий на нож. Вы решаете взять его с собой."
+            "\u0412\u044b\u0439\u0442\u0438 \u0432 \u043c\u0435\u043d\u044e",
+            "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f",
+            "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438",
+            "\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c"
     };
 
     private OrthographicCamera camera;
@@ -124,6 +82,9 @@ public class FirstScreen implements Screen {
     private ShapeRenderer shapeRenderer;
     private SpriteBatch batch;
     private BitmapFont font;
+    private GlyphLayout glyphLayout;
+    private Texture heroTexture;
+    private TextureRegion[] heroFrames;
     private final MetroHorrorGame game;
     private final int loadSlot;
     private final Rectangle[] pauseButtonBounds = new Rectangle[5];
@@ -139,6 +100,9 @@ public class FirstScreen implements Screen {
     private InventoryUI inventoryUI;
 
     private boolean inventoryVisible;
+    private InventoryDragSource inventoryDragSource = InventoryDragSource.NONE;
+    private int inventoryDragSlot = -1;
+    private WeaponType draggedWeapon;
     private boolean dialogueVisible = true;
     private boolean prologueActive = true;
     private int dialogueLine;
@@ -148,13 +112,17 @@ public class FirstScreen implements Screen {
     private boolean knifeCollected;
     private float knifeSwingTimer;
     private boolean knifeDamageApplied;
+    private AttackDirection attackDirection = AttackDirection.FORWARD;
+    private boolean chapelIntroSeen;
+    private boolean engineIntroSeen;
+    private boolean doorLockedUntilPlayerMoves;
     private boolean lyingInBed;
     private boolean pauseMenuVisible;
     private int hoveredPauseButton = -1;
     private PausePanel pausePanel = PausePanel.NONE;
 
-    private String[] currentSpeakers = PROLOGUE_SPEAKERS;
-    private String[] currentText = PROLOGUE_TEXT;
+    private String[] currentSpeakers = DialogueScripts.PROLOGUE_SPEAKERS;
+    private String[] currentText = DialogueScripts.PROLOGUE_TEXT;
 
     public FirstScreen() {
         this(null, -1);
@@ -190,6 +158,8 @@ public class FirstScreen implements Screen {
         shapeRenderer = new ShapeRenderer();
         batch = new SpriteBatch();
         font = createGameFont();
+        glyphLayout = new GlyphLayout();
+        loadHeroSpriteSheet();
         setupPauseMenuBounds();
 
         player = new Player(140, 240);
@@ -220,6 +190,11 @@ public class FirstScreen implements Screen {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             renderWorld();
             shapeRenderer.end();
+
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            renderPlayerSprite();
+            batch.end();
         }
 
         hudViewport.apply();
@@ -240,6 +215,7 @@ public class FirstScreen implements Screen {
         if (!prologueActive) {
             renderHud();
             renderHealthBar();
+            renderInventoryHeroSprite();
             inventoryUI.render(batch, font, inventorySystem, inventoryVisible, uiCamera.viewportWidth, uiCamera.viewportHeight);
         } else {
             renderPrologueTitle();
@@ -271,9 +247,9 @@ public class FirstScreen implements Screen {
         player.applyGravity(delta);
         player.update(delta);
         resolveWorldCollisions();
+        updateDoorLock();
         checkTrashPileDiscovery();
         if (locationIndex == 2) {
-            handleEnemyStomps();
             updateDungeonEnemies(delta);
             updateKnifeAttack();
             if (!player.isAlive()) {
@@ -299,6 +275,14 @@ public class FirstScreen implements Screen {
             return;
         }
 
+        if (!prologueActive && !dialogueVisible) {
+            updateWeaponSelectionInput();
+        }
+
+        if (inventoryVisible) {
+            updateInventoryInput();
+        }
+
         if (!dialogueVisible && !inventoryVisible && !prologueActive && !lyingInBed) {
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 player.moveLeft();
@@ -309,13 +293,14 @@ public class FirstScreen implements Screen {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
                 player.jump();
             }
-            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && knifeCollected) {
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && inventorySystem.getSelectedWeapon() != null) {
                 startKnifeAttack();
             }
         }
 
         if (!prologueActive && Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
             inventoryVisible = !inventoryVisible;
+            cancelInventoryDrag();
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.E) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
@@ -378,6 +363,162 @@ public class FirstScreen implements Screen {
         }
     }
 
+    private void updateWeaponSelectionInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+            inventorySystem.selectWeaponSlot(0);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+            inventorySystem.selectWeaponSlot(1);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            inventorySystem.selectWeaponSlot(2);
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
+            inventorySystem.selectWeaponSlot(3);
+        }
+
+    }
+
+    private void updateInventoryInput() {
+        pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
+        hudViewport.unproject(pointer);
+
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            int handSlot = getHandSlotAt(pointer.x, pointer.y);
+            if (handSlot >= 0) {
+                draggedWeapon = inventorySystem.takeWeaponFromHand(handSlot);
+                if (draggedWeapon != null) {
+                    inventoryDragSource = InventoryDragSource.HAND;
+                    inventoryDragSlot = handSlot;
+                }
+                return;
+            }
+
+            int bagSlot = getBagSlotAt(pointer.x, pointer.y);
+            if (bagSlot >= 0) {
+                draggedWeapon = inventorySystem.takeWeaponFromBag(bagSlot);
+                if (draggedWeapon != null) {
+                    inventoryDragSource = InventoryDragSource.BAG;
+                    inventoryDragSlot = bagSlot;
+                }
+            }
+        }
+
+        if (draggedWeapon != null && !Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+            dropInventoryWeapon(pointer.x, pointer.y);
+        }
+    }
+
+    private void dropInventoryWeapon(float x, float y) {
+        int handSlot = getHandSlotAt(x, y);
+        if (handSlot >= 0) {
+            WeaponType displaced = inventorySystem.takeWeaponFromHand(handSlot);
+            inventorySystem.equipWeapon(handSlot, draggedWeapon);
+            returnDraggedWeapon(displaced);
+            clearInventoryDrag();
+            return;
+        }
+
+        int bagSlot = getBagSlotAt(x, y);
+        if (bagSlot >= 0) {
+            WeaponType displaced = inventorySystem.takeWeaponFromBag(bagSlot);
+            inventorySystem.putBagWeapon(bagSlot, draggedWeapon);
+            returnDraggedWeapon(displaced);
+            clearInventoryDrag();
+            return;
+        }
+
+        if (inventoryDragSource == InventoryDragSource.HAND && inventorySystem.addWeaponToBag(draggedWeapon)) {
+            clearInventoryDrag();
+            return;
+        }
+
+        returnDraggedWeapon(draggedWeapon);
+        clearInventoryDrag();
+    }
+
+    private void returnDraggedWeapon(WeaponType weapon) {
+        if (weapon == null) {
+            return;
+        }
+        if (inventoryDragSource == InventoryDragSource.HAND) {
+            inventorySystem.equipWeapon(inventoryDragSlot, weapon);
+        } else if (inventoryDragSource == InventoryDragSource.BAG) {
+            inventorySystem.putBagWeapon(inventoryDragSlot, weapon);
+        } else {
+            inventorySystem.addWeaponToBag(weapon);
+        }
+    }
+
+    private void cancelInventoryDrag() {
+        if (draggedWeapon != null) {
+            returnDraggedWeapon(draggedWeapon);
+            clearInventoryDrag();
+        }
+    }
+
+    private void clearInventoryDrag() {
+        draggedWeapon = null;
+        inventoryDragSource = InventoryDragSource.NONE;
+        inventoryDragSlot = -1;
+    }
+
+    private int getHandSlotAt(float x, float y) {
+        for (int i = 0; i < InventorySystem.WEAPON_SLOT_COUNT; i++) {
+            if (getHandSlotBounds(i).contains(x, y)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int getBagSlotAt(float x, float y) {
+        for (int i = 0; i < InventorySystem.BAG_SLOT_COUNT; i++) {
+            if (getBagSlotBounds(i).contains(x, y)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private Rectangle getHandSlotBounds(int slot) {
+        float panelX = getInventoryPanelX();
+        float panelY = getInventoryPanelY();
+        return new Rectangle(
+                panelX + 134f + slot * (INVENTORY_SLOT_SIZE + INVENTORY_SLOT_GAP),
+                panelY + 34f,
+                INVENTORY_SLOT_SIZE,
+                INVENTORY_SLOT_SIZE
+        );
+    }
+
+    private Rectangle getBagSlotBounds(int slot) {
+        float panelX = getInventoryPanelX();
+        float panelY = getInventoryPanelY();
+        int col = slot % INVENTORY_BAG_COLUMNS;
+        int row = slot / INVENTORY_BAG_COLUMNS;
+        return new Rectangle(
+                panelX + 416f + col * (INVENTORY_SLOT_SIZE + INVENTORY_SLOT_GAP),
+                panelY + 256f - row * (INVENTORY_SLOT_SIZE + INVENTORY_SLOT_GAP),
+                INVENTORY_SLOT_SIZE,
+                INVENTORY_SLOT_SIZE
+        );
+    }
+
+    private float getInventoryPanelX() {
+        return uiCamera.viewportWidth / 2f - INVENTORY_PANEL_WIDTH / 2f;
+    }
+
+    private float getInventoryPanelY() {
+        return uiCamera.viewportHeight / 2f - INVENTORY_PANEL_HEIGHT / 2f;
+    }
+
+    private void updateDoorLock() {
+        if (!doorLockedUntilPlayerMoves || dialogueVisible || prologueActive) {
+            return;
+        }
+        if (!isNear(player.getBounds(), getActiveDoor(), 95f)) {
+            doorLockedUntilPlayerMoves = false;
+        }
+    }
+
     public void saveToSlot(int slot) {
         if (!isValidSaveSlot(slot)) {
             return;
@@ -392,6 +533,8 @@ public class FirstScreen implements Screen {
         preferences.putInteger(prefix + "health", player.getHealth());
         preferences.putBoolean(prefix + "knifeCollected", knifeCollected);
         preferences.putBoolean(prefix + "lyingInBed", lyingInBed);
+        preferences.putBoolean(prefix + "chapelIntroSeen", chapelIntroSeen);
+        preferences.putBoolean(prefix + "engineIntroSeen", engineIntroSeen);
         preferences.putBoolean(prefix + "prologueActive", prologueActive);
         preferences.putBoolean(prefix + "dialogueVisible", dialogueVisible);
         preferences.putInteger(prefix + "dialogueLine", dialogueLine);
@@ -414,6 +557,8 @@ public class FirstScreen implements Screen {
 
         knifeCollected = preferences.getBoolean(prefix + "knifeCollected", false);
         lyingInBed = preferences.getBoolean(prefix + "lyingInBed", false);
+        chapelIntroSeen = preferences.getBoolean(prefix + "chapelIntroSeen", false);
+        engineIntroSeen = preferences.getBoolean(prefix + "engineIntroSeen", false);
         if (knifeCollected) {
             inventorySystem.equipWeapon(0, WeaponType.BASIC_KNIFE);
             inventorySystem.selectWeaponSlot(0);
@@ -445,13 +590,13 @@ public class FirstScreen implements Screen {
 
     public static String getSaveSummary(int slot) {
         if (!hasSave(slot)) {
-            return "Пусто";
+            return "\u041f\u0443\u0441\u0442\u043e";
         }
 
         Preferences preferences = Gdx.app.getPreferences(SAVE_PREFERENCES);
         String prefix = getSavePrefix(slot);
         int location = preferences.getInteger(prefix + "locationIndex", 0);
-        String place = location == -1 ? "Комната" : location == 0 ? "Часовня" : location == 1 ? "Двигатель" : "Подземелье";
+        String place = LocationId.fromIndex(location).getDisplayName();
         int health = preferences.getInteger(prefix + "health", Constants.PLAYER_MAX_HEALTH);
         return place + " | HP " + health + "/" + Constants.PLAYER_MAX_HEALTH;
     }
@@ -469,13 +614,13 @@ public class FirstScreen implements Screen {
     }
 
     private String getCurrentDialogueKey() {
-        if (currentText == PROLOGUE_TEXT) {
+        if (currentText == DialogueScripts.PROLOGUE_TEXT) {
             return "prologue";
         }
-        if (currentText == ENGINE_TEXT) {
+        if (currentText == DialogueScripts.ENGINE_TEXT) {
             return "engine";
         }
-        if (currentText == TRASH_TEXT) {
+        if (currentText == DialogueScripts.TRASH_TEXT) {
             return "trash";
         }
         return "chapel";
@@ -483,17 +628,17 @@ public class FirstScreen implements Screen {
 
     private void setCurrentDialogue(String dialogueKey) {
         if ("prologue".equals(dialogueKey)) {
-            currentSpeakers = PROLOGUE_SPEAKERS;
-            currentText = PROLOGUE_TEXT;
+            currentSpeakers = DialogueScripts.PROLOGUE_SPEAKERS;
+            currentText = DialogueScripts.PROLOGUE_TEXT;
         } else if ("engine".equals(dialogueKey)) {
-            currentSpeakers = ENGINE_SPEAKERS;
-            currentText = ENGINE_TEXT;
+            currentSpeakers = DialogueScripts.ENGINE_SPEAKERS;
+            currentText = DialogueScripts.ENGINE_TEXT;
         } else if ("trash".equals(dialogueKey)) {
-            currentSpeakers = TRASH_SPEAKERS;
-            currentText = TRASH_TEXT;
+            currentSpeakers = DialogueScripts.TRASH_SPEAKERS;
+            currentText = DialogueScripts.TRASH_TEXT;
         } else {
-            currentSpeakers = CHAPEL_SPEAKERS;
-            currentText = CHAPEL_TEXT;
+            currentSpeakers = DialogueScripts.CHAPEL_SPEAKERS;
+            currentText = DialogueScripts.CHAPEL_TEXT;
         }
     }
 
@@ -507,7 +652,7 @@ public class FirstScreen implements Screen {
             dialogueLine++;
             dialogueTypeTimer = 0f;
             if (dialogueLine >= currentText.length) {
-                if (currentText == TRASH_TEXT && !knifeCollected) {
+                if (currentText == DialogueScripts.TRASH_TEXT && !knifeCollected) {
                     collectKnife();
                 }
                 dialogueVisible = false;
@@ -530,30 +675,37 @@ public class FirstScreen implements Screen {
                 return;
             }
             if (!lyingInBed && isNear(player.getBounds(), BEDROOM_DOOR, 70f)) {
-                changeLocation();
+                tryChangeLocation();
             }
             return;
         }
 
         if (locationIndex == 0 && isNear(player.getBounds(), SCHOLAR_BOUNDS, 80f)) {
-            startDialogue(CHAPEL_SPEAKERS, CHAPEL_TEXT);
+            startDialogue(DialogueScripts.CHAPEL_SPEAKERS, DialogueScripts.CHAPEL_TEXT);
             return;
         }
 
         if (locationIndex == 0 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
-            changeLocation();
+            tryChangeLocation();
             return;
         }
 
         if (locationIndex == 1 && !knifeCollected && isNear(player.getBounds(), ENGINE_DUNGEON_DOOR, 120f)) {
-            startDialogue(TRASH_SPEAKERS, TRASH_TEXT);
+            startDialogue(DialogueScripts.TRASH_SPEAKERS, DialogueScripts.TRASH_TEXT);
             return;
         }
 
         Rectangle door = getActiveDoor();
         if (isNear(player.getBounds(), door, 70f)) {
-            changeLocation();
+            tryChangeLocation();
         }
+    }
+
+    private void tryChangeLocation() {
+        if (doorLockedUntilPlayerMoves) {
+            return;
+        }
+        changeLocation();
     }
 
     private void startDialogue(String[] speakers, String[] text) {
@@ -575,6 +727,7 @@ public class FirstScreen implements Screen {
         player.setX(BEDROOM_PLAYER_X);
         player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
         player.setVelocityY(0f);
+        doorLockedUntilPlayerMoves = true;
         camera.position.x = player.getX();
         camera.update();
     }
@@ -585,7 +738,6 @@ public class FirstScreen implements Screen {
             locationIndex = 0;
             lyingInBed = false;
             player.setX(140f);
-            startDialogue(CHAPEL_SPEAKERS, CHAPEL_TEXT);
         } else if (locationIndex == 0 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
             locationIndex = -1;
             lyingInBed = false;
@@ -609,15 +761,20 @@ public class FirstScreen implements Screen {
         dialogueVisible = false;
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
+        doorLockedUntilPlayerMoves = true;
         player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
         player.setVelocityY(0f);
         camera.position.x = player.getX();
         camera.update();
 
-        if (startChapelDialogue) {
-            startDialogue(CHAPEL_SPEAKERS, CHAPEL_TEXT);
+        if (startChapelDialogue && !chapelIntroSeen) {
+            chapelIntroSeen = true;
+            startDialogue(DialogueScripts.CHAPEL_SPEAKERS, DialogueScripts.CHAPEL_TEXT);
         } else if (locationIndex == 1) {
-            startDialogue(ENGINE_SPEAKERS, ENGINE_TEXT);
+            if (!engineIntroSeen) {
+                engineIntroSeen = true;
+                startDialogue(DialogueScripts.ENGINE_SPEAKERS, DialogueScripts.ENGINE_TEXT);
+            }
         }
     }
 
@@ -625,11 +782,8 @@ public class FirstScreen implements Screen {
         if (locationIndex == -1) {
             return BEDROOM_DOOR;
         }
-        String place;
-        if (locationIndex == -1) {
-            place = "Комната";
-        } else if (locationIndex == 0) {
-            return CHAPEL_DOOR;
+        if (locationIndex == 0) {
+            return player.getX() < Constants.WORLD_WIDTH * 0.5f ? CHAPEL_BEDROOM_DOOR : CHAPEL_DOOR;
         }
         if (locationIndex == 1) {
             return player.getX() > Constants.WORLD_WIDTH * 0.5f ? ENGINE_DUNGEON_DOOR : ENGINE_RETURN_DOOR;
@@ -704,8 +858,6 @@ public class FirstScreen implements Screen {
             renderDungeonEnemies();
         }
 
-        renderPlayer();
-        renderKnifeSlash();
     }
 
     private void checkTrashPileDiscovery() {
@@ -713,7 +865,7 @@ public class FirstScreen implements Screen {
             return;
         }
         if (isNear(player.getBounds(), TRASH_PILE, 42f)) {
-            startDialogue(TRASH_SPEAKERS, TRASH_TEXT);
+            startDialogue(DialogueScripts.TRASH_SPEAKERS, DialogueScripts.TRASH_TEXT);
         }
     }
 
@@ -721,23 +873,50 @@ public class FirstScreen implements Screen {
         knifeCollected = true;
         inventorySystem.equipWeapon(0, WeaponType.BASIC_KNIFE);
         inventorySystem.selectWeaponSlot(0);
+        inventorySystem.addItem("\u041e\u0441\u043a\u043e\u043b\u043a\u0438 \u0441\u0442\u0435\u043a\u043b\u0430", 3);
+        inventorySystem.addItem("\u0422\u043a\u0430\u043d\u0435\u0432\u0430\u044f \u043f\u043e\u0432\u044f\u0437\u043a\u0430", 1);
+        inventorySystem.addWeaponToBag(WeaponType.RUSTY_SWORD);
     }
 
     private void startKnifeAttack() {
-        if (knifeSwingTimer > 0f) {
+        WeaponType weapon = inventorySystem.getSelectedWeapon();
+        if (knifeSwingTimer > 0f || weapon == null) {
             return;
         }
-        knifeSwingTimer = KNIFE_SWING_TIME;
+        attackDirection = getRequestedAttackDirection();
+        knifeSwingTimer = weapon.getSwingDuration();
         knifeDamageApplied = false;
     }
 
+    private AttackDirection getRequestedAttackDirection() {
+        if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            return AttackDirection.UP;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            return AttackDirection.DOWN;
+        }
+        return AttackDirection.FORWARD;
+    }
+
     private Rectangle getKnifeAttackBounds() {
-        float width = 68f;
+        WeaponType weapon = inventorySystem.getSelectedWeapon();
+        float range = weapon == null ? 68f : weapon.getRange() + 18f;
+        Rectangle playerBounds = player.getBounds();
+        if (attackDirection == AttackDirection.UP) {
+            return new Rectangle(playerBounds.x - 10f, playerBounds.y + playerBounds.height - 4f,
+                    playerBounds.width + 20f, range);
+        }
+        if (attackDirection == AttackDirection.DOWN) {
+            return new Rectangle(playerBounds.x - 10f, playerBounds.y - range + 8f,
+                    playerBounds.width + 20f, range);
+        }
+
+        float width = range;
         float height = 54f;
         float x = player.isFacingRight()
-                ? player.getBounds().x + player.getBounds().width - 2f
-                : player.getBounds().x - width + 2f;
-        float y = player.getBounds().y + 12f;
+                ? playerBounds.x + playerBounds.width - 2f
+                : playerBounds.x - width + 2f;
+        float y = playerBounds.y + 12f;
         return new Rectangle(x, y, width, height);
     }
 
@@ -746,11 +925,19 @@ public class FirstScreen implements Screen {
             return;
         }
 
+        WeaponType weapon = inventorySystem.getSelectedWeapon();
+        if (weapon == null) {
+            return;
+        }
         Rectangle attackBounds = getKnifeAttackBounds();
-        for (Enemy enemy : dungeonEnemies) {
+        for (int i = 0; i < dungeonEnemies.size; i++) {
+            Enemy enemy = dungeonEnemies.get(i);
             if (enemy.isAlive() && attackBounds.overlaps(enemy.getBounds())) {
-                enemy.takeDamage(KNIFE_DAMAGE);
+                enemy.takeDamage(Math.max(KNIFE_DAMAGE, weapon.getDamage()));
                 rewardEnemyKill(enemy);
+                if (attackDirection == AttackDirection.DOWN) {
+                    player.bounceFromDownAttack(DOWN_ATTACK_BOUNCE);
+                }
                 knifeDamageApplied = true;
                 return;
             }
@@ -764,60 +951,90 @@ public class FirstScreen implements Screen {
         }
     }
 
-    private void handleEnemyStomps() {
-        if (player.getVelocityY() > 0f) {
-            return;
-        }
-
-        for (Enemy enemy : dungeonEnemies) {
-            if (!enemy.isAlive() || !player.getBounds().overlaps(enemy.getBounds())) {
-                continue;
-            }
-
-            float playerBottom = player.getBounds().y;
-            float stompLine = enemy.getBounds().y + enemy.getBounds().height * 0.55f;
-            if (playerBottom >= stompLine) {
-                enemy.takeDamage(STOMP_DAMAGE);
-                rewardEnemyKill(enemy);
-                player.bounceFromEnemy();
-                return;
-            }
-        }
-    }
-
     private void updateDungeonEnemies(float delta) {
-        for (Enemy enemy : dungeonEnemies) {
+        for (int i = 0; i < dungeonEnemies.size; i++) {
+            Enemy enemy = dungeonEnemies.get(i);
             if (!enemy.isAlive()) {
                 enemy.update(delta);
                 continue;
             }
 
             resolveEnemyGrounding(enemy);
-            float dx = player.getX() - enemy.getX();
+            updateEnemyAi(enemy, delta);
+            enemy.update(delta);
+        }
+    }
+
+    private void updateEnemyAi(Enemy enemy, float delta) {
+            float playerCenterX = player.getBounds().x + player.getBounds().width / 2f;
+            float enemyCenterX = enemy.getBounds().x + enemy.getBounds().width / 2f;
+            float dx = playerCenterX - enemyCenterX;
             float absDx = Math.abs(dx);
             float playerCenterY = player.getBounds().y + player.getBounds().height / 2f;
             float enemyCenterY = enemy.getBounds().y + enemy.getBounds().height / 2f;
             boolean closeEnoughOnY = Math.abs(playerCenterY - enemyCenterY) < 82f;
-            float distanceFromDoor = enemy.getX() - DUNGEON_RETURN_DOOR.x;
+            boolean canSeePlayer = closeEnoughOnY && absDx < Constants.ENEMY_AGGRO_RANGE + 230f;
 
-            if (closeEnoughOnY && absDx < 540f && absDx > 70f) {
-                float pressureSpeed = enemy.getSpeed() * (absDx < 190f ? 1.35f : 1f);
-                enemy.moveToward(player.getX(), pressureSpeed, delta);
-            } else if (absDx >= 540f && enemy.canAttack()) {
-                float patrolTarget = enemy.getX() + MathUtils.sin(time * 1.4f + enemy.getX() * 0.02f) * 120f;
-                if (distanceFromDoor > 120f && distanceFromDoor < Constants.WORLD_WIDTH - 260f) {
-                    enemy.moveToward(patrolTarget, enemy.getSpeed() * 0.35f, delta);
-                }
+            if (enemy.shouldPickNewDecision()) {
+                float direction = MathUtils.randomBoolean() ? 1f : -1f;
+                enemy.pickDecision(MathUtils.random(0.55f, 1.25f), direction);
             }
-            if (closeEnoughOnY && absDx <= 96f && enemy.canAttack() && player.isAlive()) {
+
+            if (canSeePlayer) {
+                enemy.noticePlayer(delta);
+                enemy.face(playerCenterX);
+            } else {
+                enemy.calmDown(delta);
+            }
+
+            float desiredDistance = enemy.getAttackRange() + 28f + enemy.getAlertness() * 30f;
+            if (enemy.getAlertness() > 0.08f && closeEnoughOnY) {
+                if (absDx > desiredDistance) {
+                    float pressureSpeed = enemy.getSpeed() * (0.55f + enemy.getAlertness() * 0.75f);
+                    enemy.moveToward(playerCenterX, pressureSpeed, delta);
+                } else if (absDx < desiredDistance * 0.72f) {
+                    float backStep = -Math.signum(dx) * enemy.getSpeed() * 0.55f * delta;
+                    enemy.moveBy(backStep);
+                } else {
+                    enemy.moveBy(enemy.getStrafeDirection() * enemy.getSpeed() * 0.22f * delta);
+                }
+            } else {
+                float patrolTarget = enemy.getHomeX() + MathUtils.sin(time * 1.2f + enemy.getHomeX() * 0.02f) * 115f;
+                enemy.moveToward(patrolTarget, enemy.getSpeed() * 0.32f, delta);
+            }
+
+            applyEnemySeparation(enemy, delta);
+            enemy.clampX(DUNGEON_RETURN_DOOR.x + 115f, Constants.WORLD_WIDTH - 120f);
+
+            if (closeEnoughOnY && absDx <= enemy.getAttackRange() + 14f && enemy.canAttack() && player.isAlive()) {
                 enemy.triggerAttack();
-                float lungeTarget = player.getX() + (dx > 0f ? -24f : 24f);
-                enemy.moveToward(lungeTarget, enemy.getSpeed() * 2.3f, delta);
-                if (absDx <= 64f) {
+                float lungeTarget = playerCenterX + (dx > 0f ? -30f : 30f);
+                enemy.moveToward(lungeTarget, enemy.getSpeed() * enemy.getLungePower(), delta);
+                if (absDx <= enemy.getAttackRange()) {
                     player.takeDamage(enemy.getDamage());
                 }
             }
-            enemy.update(delta);
+    }
+
+    private void applyEnemySeparation(Enemy enemy, float delta) {
+        float push = 0f;
+        float enemyCenterX = enemy.getBounds().x + enemy.getBounds().width / 2f;
+        for (int i = 0; i < dungeonEnemies.size; i++) {
+            Enemy other = dungeonEnemies.get(i);
+            if (other == enemy || !other.isAlive()) {
+                continue;
+            }
+
+            float otherCenterX = other.getBounds().x + other.getBounds().width / 2f;
+            float distance = enemyCenterX - otherCenterX;
+            float absDistance = Math.abs(distance);
+            if (absDistance > 0f && absDistance < 58f) {
+                push += Math.signum(distance) * (58f - absDistance);
+            }
+        }
+
+        if (push != 0f) {
+            enemy.moveBy(MathUtils.clamp(push, -70f, 70f) * delta * 4.2f);
         }
     }
 
@@ -828,14 +1045,14 @@ public class FirstScreen implements Screen {
     private void spawnDungeonEnemies() {
         float groundY = Constants.GROUND_Y + Constants.GROUND_HEIGHT;
         dungeonEnemies.clear();
-        dungeonEnemies.add(new Enemy(520f, groundY, 5, 150f, 6, 0.16f, 0.18f, 0.22f, 0.74f, 0.62f, 0.50f));
-        dungeonEnemies.add(new Enemy(820f, groundY, 4, 190f, 5, 0.34f, 0.10f, 0.12f, 0.86f, 0.70f, 0.56f));
-        dungeonEnemies.add(new Enemy(1130f, groundY, 7, 132f, 8, 0.12f, 0.28f, 0.22f, 0.62f, 0.48f, 0.38f));
-        dungeonEnemies.add(new Enemy(1480f, groundY, 5, 165f, 7, 0.28f, 0.16f, 0.34f, 0.82f, 0.66f, 0.48f));
-        dungeonEnemies.add(new Enemy(1840f, groundY, 4, 205f, 5, 0.42f, 0.30f, 0.10f, 0.70f, 0.54f, 0.42f));
-        dungeonEnemies.add(new Enemy(2160f, groundY, 7, 140f, 8, 0.10f, 0.20f, 0.36f, 0.88f, 0.72f, 0.58f));
-        dungeonEnemies.add(new Enemy(2470f, groundY, 5, 175f, 7, 0.30f, 0.08f, 0.08f, 0.66f, 0.48f, 0.36f));
-        dungeonEnemies.add(new Enemy(2760f, groundY, 9, 122f, 9, 0.08f, 0.26f, 0.30f, 0.78f, 0.60f, 0.46f));
+        dungeonEnemies.add(new Enemy(520f, groundY, 8, 116f, 6, Enemy.AttackStyle.CLAW, 0.16f, 0.18f, 0.22f, 0.74f, 0.62f, 0.50f));
+        dungeonEnemies.add(new Enemy(820f, groundY, 7, 142f, 5, Enemy.AttackStyle.LUNGE, 0.34f, 0.10f, 0.12f, 0.86f, 0.70f, 0.56f));
+        dungeonEnemies.add(new Enemy(1130f, groundY, 11, 104f, 8, Enemy.AttackStyle.HEAVY, 0.12f, 0.28f, 0.22f, 0.62f, 0.48f, 0.38f));
+        dungeonEnemies.add(new Enemy(1480f, groundY, 8, 126f, 7, Enemy.AttackStyle.CLAW, 0.28f, 0.16f, 0.34f, 0.82f, 0.66f, 0.48f));
+        dungeonEnemies.add(new Enemy(1840f, groundY, 7, 150f, 5, Enemy.AttackStyle.LUNGE, 0.42f, 0.30f, 0.10f, 0.70f, 0.54f, 0.42f));
+        dungeonEnemies.add(new Enemy(2160f, groundY, 12, 108f, 8, Enemy.AttackStyle.HEAVY, 0.10f, 0.20f, 0.36f, 0.88f, 0.72f, 0.58f));
+        dungeonEnemies.add(new Enemy(2470f, groundY, 8, 132f, 7, Enemy.AttackStyle.CLAW, 0.30f, 0.08f, 0.08f, 0.66f, 0.48f, 0.36f));
+        dungeonEnemies.add(new Enemy(2760f, groundY, 13, 98f, 9, Enemy.AttackStyle.HEAVY, 0.08f, 0.26f, 0.30f, 0.78f, 0.60f, 0.46f));
     }
 
     private void respawnAtCurrentDoor() {
@@ -874,71 +1091,79 @@ public class FirstScreen implements Screen {
     }
 
     private void renderHumanEnemy(Enemy enemy) {
-        float walk = MathUtils.sin(time * 13f + enemy.getX() * 0.03f) * 5f;
+        float walk = MathUtils.sin(time * 10f + enemy.getX() * 0.03f) * 4f;
         float breathe = MathUtils.sin(time * 3.4f + enemy.getX() * 0.01f) * 1.4f;
         float dir = enemy.isFacingRight() ? 1f : -1f;
         Rectangle b = enemy.getBounds();
         float x = b.x;
         float y = b.y;
+        float attackProgress = enemy.isAttacking() ? enemy.getAttackProgress() : 0f;
+        boolean heavy = enemy.getAttackStyle() == Enemy.AttackStyle.HEAVY;
+        boolean lunge = enemy.getAttackStyle() == Enemy.AttackStyle.LUNGE;
 
         shapeRenderer.setColor(enemy.getSkinR(), enemy.getSkinG(), enemy.getSkinB(), 1f);
-        shapeRenderer.rect(x + 11f, y + 42f + breathe, 18f, 18f);
+        shapeRenderer.rect(x + 7f, y + 39f + breathe, 18f, 18f);
         shapeRenderer.setColor(enemy.getCoatR(), enemy.getCoatG(), enemy.getCoatB(), 1f);
-        shapeRenderer.rect(x + 5f, y + 8f, 30f, 40f + breathe * 0.3f);
+        shapeRenderer.rect(x + 1f, y + 8f, 30f, 36f + breathe * 0.3f);
         shapeRenderer.setColor(0.025f, 0.025f, 0.030f, 1f);
-        shapeRenderer.rect(x + 8f, y + 50f + breathe, 26f, 7f);
+        shapeRenderer.rect(x + 4f, y + 47f + breathe, 26f, 7f);
         shapeRenderer.setColor(0.88f, 0.78f, 0.64f, 1f);
-        shapeRenderer.rect(x + 13f, y + 51f + breathe, 5f, 3f);
-        shapeRenderer.rect(x + 25f, y + 51f + breathe, 5f, 3f);
+        shapeRenderer.rect(x + 9f, y + 48f + breathe, 5f, 3f);
+        shapeRenderer.rect(x + 21f, y + 48f + breathe, 5f, 3f);
 
-        float armReach = enemy.isAttacking() ? 14f * enemy.getAttackProgress() : 0f;
+        float armReach = enemy.isAttacking() ? (heavy ? 9f : lunge ? 28f : 16f) * attackProgress : 0f;
         shapeRenderer.setColor(enemy.getCoatR() * 0.75f, enemy.getCoatG() * 0.75f, enemy.getCoatB() * 0.75f, 1f);
-        shapeRenderer.rect(x + (dir > 0 ? 30f : -4f) + dir * armReach, y + 30f, 8f, 24f);
-        shapeRenderer.rect(x + (dir > 0 ? 2f : 34f), y + 28f, 8f, 22f);
+        shapeRenderer.rect(x + (dir > 0 ? 26f : -4f) + dir * armReach, y + 27f, 8f, heavy ? 30f : 22f);
+        shapeRenderer.rect(x + (dir > 0 ? -2f : 30f), y + 26f, 8f, 20f);
+        if (heavy) {
+            shapeRenderer.setColor(0.08f, 0.07f, 0.06f, 1f);
+            shapeRenderer.rectLine(x + 16f, y + 48f, x + 16f + dir * (28f + 14f * attackProgress), y + 20f - 8f * attackProgress, 7f);
+        } else if (lunge) {
+            shapeRenderer.setColor(0.72f, 0.74f, 0.70f, 1f);
+            shapeRenderer.rectLine(x + 16f, y + 34f, x + 16f + dir * (48f + 22f * attackProgress), y + 32f, 4f);
+        } else if (enemy.isAttacking()) {
+            shapeRenderer.setColor(0.70f, 0.66f, 0.58f, 1f);
+            shapeRenderer.rectLine(x + 16f, y + 35f, x + 16f + dir * (34f + 8f * attackProgress), y + 42f - 20f * attackProgress, 3f);
+        }
         shapeRenderer.setColor(0.055f, 0.058f, 0.064f, 1f);
-        shapeRenderer.rect(x + 7f + walk, y, 9f, 14f);
-        shapeRenderer.rect(x + 24f - walk, y, 9f, 14f);
+        shapeRenderer.rect(x + 4f + walk, y, 9f, 13f);
+        shapeRenderer.rect(x + 20f - walk, y, 9f, 13f);
     }
 
     private void renderKnifeSlash() {
-        if (knifeSwingTimer <= 0f || !knifeCollected) {
+        WeaponType weapon = inventorySystem.getSelectedWeapon();
+        if (knifeSwingTimer <= 0f || weapon == null) {
             return;
         }
-        float progress = 1f - knifeSwingTimer / KNIFE_SWING_TIME;
+        float progress = 1f - knifeSwingTimer / weapon.getSwingDuration();
         float dir = player.isFacingRight() ? 1f : -1f;
-        float centerX = player.getBounds().x + player.getBounds().width * 0.5f + dir * 16f;
+        float centerX = player.getBounds().x + player.getBounds().width * 0.5f;
         float centerY = player.getBounds().y + player.getBounds().height * 0.58f;
-        float sweepStart = player.isFacingRight() ? -62f : 242f;
-        float sweepEnd = player.isFacingRight() ? 62f : 118f;
-        float headAngle = MathUtils.lerp(sweepStart, sweepEnd, progress);
+        float range = weapon.getRange();
         float fade = MathUtils.sin(progress * MathUtils.PI);
 
-        for (int i = 0; i < 7; i++) {
-            float t = i / 6f;
-            float angle = headAngle - dir * t * 58f;
-            float radians = angle * MathUtils.degreesToRadians;
-            float innerRadius = 22f + t * 5f;
-            float outerRadius = 64f - t * 6f;
-            float innerX = centerX + MathUtils.cos(radians) * innerRadius;
-            float innerY = centerY + MathUtils.sin(radians) * (innerRadius * 0.72f);
-            float outerX = centerX + MathUtils.cos(radians) * outerRadius;
-            float outerY = centerY + MathUtils.sin(radians) * (outerRadius * 0.72f);
-            float alpha = fade * (1f - t * 0.12f);
-            float thickness = 10f - t * 1.05f;
-
-            shapeRenderer.setColor(0.10f, 0.92f, 1f, 0.16f * alpha);
-            shapeRenderer.rectLine(innerX - dir * 4f, innerY - 2f, outerX + dir * 6f, outerY + 2f, thickness + 10f);
-            shapeRenderer.setColor(0.78f, 0.96f, 1f, 0.52f * alpha);
-            shapeRenderer.rectLine(innerX, innerY, outerX, outerY, thickness);
+        float startX = centerX + dir * 10f;
+        float startY = centerY;
+        float endX;
+        float endY;
+        if (attackDirection == AttackDirection.UP) {
+            endX = centerX + MathUtils.sin(progress * MathUtils.PI) * 16f * dir;
+            endY = centerY + range;
+        } else if (attackDirection == AttackDirection.DOWN) {
+            endX = centerX + MathUtils.sin(progress * MathUtils.PI) * 16f * dir;
+            endY = player.getBounds().y - range * 0.62f;
+            startY = player.getBounds().y + 18f;
+        } else {
+            endX = centerX + dir * (range + 18f);
+            endY = centerY + MathUtils.lerp(-18f, 18f, progress);
         }
 
-        float tipRadians = headAngle * MathUtils.degreesToRadians;
-        float tipX = centerX + MathUtils.cos(tipRadians) * 68f;
-        float tipY = centerY + MathUtils.sin(tipRadians) * 48f;
-        shapeRenderer.setColor(1f, 1f, 1f, 0.86f * fade);
-        shapeRenderer.circle(tipX, tipY, 5f, 12);
-        shapeRenderer.setColor(0.96f, 0.98f, 1f, 0.78f * fade);
-        shapeRenderer.rectLine(centerX + dir * 4f, centerY, tipX, tipY, 3.5f);
+        shapeRenderer.setColor(0.18f, 0.10f, 0.08f, fade);
+        shapeRenderer.rectLine(startX - dir * 8f, startY - 6f, startX + dir * 4f, startY + 5f, 7f);
+        shapeRenderer.setColor(0.82f, 0.82f, 0.78f, 0.92f * fade);
+        shapeRenderer.rectLine(startX, startY, endX, endY, weapon.getThickness());
+        shapeRenderer.setColor(0.98f, 0.96f, 0.88f, 0.78f * fade);
+        shapeRenderer.rectLine(startX + dir * 4f, startY + 2f, endX, endY, Math.max(2.5f, weapon.getThickness() * 0.35f));
     }
 
     private void renderPrologueScene() {
@@ -1161,12 +1386,21 @@ public class FirstScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = 22;
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
-                + "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
-                + "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
-                + "«»№…—";
+                + "\u0410\u0411\u0412\u0413\u0414\u0415\u0401\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f"
+                + "\u0430\u0431\u0432\u0433\u0434\u0435\u0451\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f"
+                + "\u00ab\u00bb\u2116\u2026\u2014\u2013";
         BitmapFont generatedFont = generator.generateFont(parameter);
         generator.dispose();
         return generatedFont;
+    }
+
+    private void loadHeroSpriteSheet() {
+        heroTexture = new Texture(Gdx.files.internal("player/hero_sheet.png"));
+        heroTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        heroFrames = new TextureRegion[HERO_FRAME_COUNT];
+        for (int i = 0; i < heroFrames.length; i++) {
+            heroFrames[i] = new TextureRegion(heroTexture, i * HERO_FRAME_SIZE, 0, HERO_FRAME_SIZE, HERO_FRAME_SIZE);
+        }
     }
 
     private void renderRuinedChapelStation() {
@@ -1532,84 +1766,170 @@ public class FirstScreen implements Screen {
         drawHero(player.getBounds().x, player.getBounds().y, 1f, player.getVelocityX(), true);
     }
 
+    private void renderPlayerSprite() {
+        if (heroFrames == null || heroFrames.length == 0) {
+            return;
+        }
+
+        int frameIndex = getHeroFrameIndex();
+        TextureRegion frame = heroFrames[frameIndex];
+        boolean attackFrame = frameIndex >= 11;
+        float drawWidth = attackFrame ? HERO_ATTACK_DRAW_WIDTH : HERO_BODY_DRAW_WIDTH;
+        float drawHeight = HERO_DRAW_HEIGHT;
+
+        if (locationIndex == -1 && lyingInBed) {
+            frame = heroFrames[0];
+            drawWidth = 126f;
+            drawHeight = 86f;
+            batch.draw(frame, BEDROOM_BED.x + 72f, BEDROOM_BED.y + 22f, drawWidth, drawHeight);
+            return;
+        }
+
+        Rectangle b = player.getBounds();
+        float x = b.x + b.width * 0.5f - drawWidth * 0.5f;
+        if (attackFrame) {
+            x += player.isFacingRight() ? 18f : -18f;
+        }
+        float y = b.y - 4f;
+        boolean flip = player.isFacingRight();
+        batch.draw(frame, flip ? x + drawWidth : x, y, flip ? -drawWidth : drawWidth, drawHeight);
+    }
+
+    private void renderInventoryHeroSprite() {
+        if (!inventoryVisible || heroFrames == null || heroFrames.length == 0) {
+            return;
+        }
+        float panelX = getInventoryPanelX();
+        float panelY = getInventoryPanelY();
+        int frameIndex = 8;
+        batch.draw(heroFrames[frameIndex], panelX + 76f, panelY + 134f, 174f, 174f);
+    }
+
+    private int getHeroFrameIndex() {
+        WeaponType weapon = inventorySystem.getSelectedWeapon();
+        if (weapon != null && knifeSwingTimer > 0f) {
+            float progress = 1f - knifeSwingTimer / weapon.getSwingDuration();
+            return 11 + MathUtils.clamp((int)(progress * 6f), 0, 5);
+        }
+
+        if (!player.isOnGround()) {
+            return Math.abs(player.getVelocityX()) > 5f ? 4 : (weapon != null ? 8 : 1);
+        }
+
+        if (Math.abs(player.getVelocityX()) > 5f) {
+            int step = (int)(player.getAnimationTime() * 0.86f) % 4;
+            return 4 + step;
+        }
+
+        if (weapon != null) {
+            return 8;
+        }
+        return 1;
+    }
+
     private void renderLyingPlayer() {
         float x = BEDROOM_BED.x + 76f;
         float y = BEDROOM_BED.y + 34f;
         float breathe = MathUtils.sin(time * 2.2f) * 1.4f;
 
-        shapeRenderer.setColor(0.10f, 0.018f, 0.024f, 1f);
+        shapeRenderer.setColor(0.030f, 0.035f, 0.040f, 1f);
         shapeRenderer.rect(x + 24f, y + breathe, 104f, 24f);
-        shapeRenderer.setColor(0.90f, 0.82f, 0.70f, 1f);
+        shapeRenderer.setColor(0.92f, 0.80f, 0.62f, 1f);
         shapeRenderer.rect(x + 8f, y + 3f + breathe, 24f, 20f);
-        shapeRenderer.setColor(0.02f, 0.02f, 0.025f, 1f);
-        shapeRenderer.rect(x + 6f, y + 18f + breathe, 30f, 8f);
-        shapeRenderer.setColor(0.92f, 0.90f, 0.80f, 1f);
-        shapeRenderer.rect(x + 12f, y + 20f + breathe, 20f, 3f);
-        shapeRenderer.setColor(0.19f, 0.04f, 0.05f, 1f);
+        shapeRenderer.setColor(0.92f, 0.78f, 0.20f, 1f);
+        shapeRenderer.rect(x + 4f, y + 19f + breathe, 34f, 10f);
+        shapeRenderer.setColor(0.04f, 0.045f, 0.052f, 1f);
+        shapeRenderer.rect(x + 38f, y + 18f + breathe, 68f, 16f);
+        shapeRenderer.setColor(0.09f, 0.10f, 0.11f, 1f);
         shapeRenderer.rect(x + 112f, y + 2f + breathe, 28f, 7f);
         shapeRenderer.rect(x + 114f, y + 18f + breathe, 24f, 7f);
-        shapeRenderer.setColor(0.80f, 0.08f, 0.08f, 1f);
-        shapeRenderer.rect(x + 36f, y + 22f + breathe, 76f, 5f);
+        shapeRenderer.setColor(0.35f, 0.39f, 0.42f, 1f);
+        shapeRenderer.rect(x + 42f, y + 25f + breathe, 58f, 4f);
     }
 
     private void drawHero(float x, float y, float scale, float motion, boolean worldScale) {
-        float walk = MathUtils.sin(time * 12f) * MathUtils.clamp(Math.abs(motion) / Constants.PLAYER_SPEED, 0f, 1f);
-        float breathe = MathUtils.sin(time * 3f) * (worldScale ? 1.5f : 3.5f);
+        float speedRatio = MathUtils.clamp(Math.abs(motion) / Constants.PLAYER_SPEED, 0f, 1f);
+        float animTime = worldScale ? player.getAnimationTime() : time * 4f;
+        float walk = MathUtils.sin(animTime * 2.7f) * speedRatio;
+        float counterWalk = MathUtils.sin(animTime * 2.7f + MathUtils.PI) * speedRatio;
+        float breathe = MathUtils.sin(animTime * 0.9f) * (worldScale ? 1.0f : 2.2f);
+        float jumpPose = worldScale && !player.isOnGround() ? MathUtils.clamp(player.getVelocityY() / Constants.PLAYER_JUMP_POWER, -1f, 1f) : 0f;
         float dir = player.isFacingRight() ? 1f : -1f;
         float s = scale;
+        float hurtTint = worldScale && player.isRecentlyDamaged() ? 0.22f : 0f;
+        WeaponType activeWeapon = inventorySystem.getSelectedWeapon();
+        float attackPose = worldScale && activeWeapon != null && knifeSwingTimer > 0f
+                ? 1f - knifeSwingTimer / activeWeapon.getSwingDuration()
+                : 0f;
+        float headY = y + 40f * s + breathe + jumpPose * 2f;
+        float torsoY = y + 17f * s + breathe * 0.25f;
 
-        shapeRenderer.setColor(0.90f, 0.82f, 0.70f, 1f);
-        shapeRenderer.rect(x + 11f * s, y + (42f * s) + breathe, 18f * s, 18f * s);
-        shapeRenderer.setColor(0.10f, 0.018f, 0.024f, 1f);
-        shapeRenderer.rect(x + 5f * s, y + 8f * s, 30f * s, (40f * s) + breathe * 0.35f);
-        shapeRenderer.setColor(0.80f, 0.08f, 0.08f, 1f);
-        shapeRenderer.rect(x + 7f * s, y + (50f * s) + breathe, 26f * s, 5f * s);
-        shapeRenderer.setColor(0.02f, 0.02f, 0.025f, 1f);
-        shapeRenderer.rect(x + 8f * s, y + (48f * s) + breathe, 28f * s, 8f * s);
-        shapeRenderer.setColor(0.92f, 0.90f, 0.80f, 1f);
-        shapeRenderer.rect(x + 11f * s, y + (51f * s) + breathe, 22f * s, 3f * s);
-        shapeRenderer.setColor(0.74f, 0.83f, 0.76f, 1f);
-        shapeRenderer.rect(x + (dir > 0 ? 25f : 10f) * s, y + (48f * s) + breathe, 5f * s, 4f * s);
-        shapeRenderer.setColor(0.19f, 0.04f, 0.05f, 1f);
-        shapeRenderer.rect(x + (2f + walk * 3f) * s, y + 27f * s, 7f * s, 20f * s);
-        shapeRenderer.rect(x + (31f - walk * 3f) * s, y + 27f * s, 7f * s, 20f * s);
-        shapeRenderer.setColor(0.05f, 0.06f, 0.065f, 1f);
-        shapeRenderer.rect(x + (7f + walk * 7f) * s, y, 9f * s, 12f * s);
-        shapeRenderer.rect(x + (24f - walk * 7f) * s, y, 9f * s, 12f * s);
+        shapeRenderer.setColor(0.010f + hurtTint * 0.5f, 0.012f, 0.014f, 1f);
+        shapeRenderer.rect(x + 7f * s, torsoY + 5f * s, 26f * s, 27f * s);
+        shapeRenderer.setColor(0.055f + hurtTint, 0.060f, 0.066f, 1f);
+        shapeRenderer.rect(x + 10f * s, torsoY + 8f * s, 20f * s, 24f * s);
+        shapeRenderer.setColor(0.15f, 0.17f, 0.18f, 1f);
+        shapeRenderer.rect(x + 14f * s, torsoY + 13f * s, 5f * s, 10f * s);
+        shapeRenderer.rect(x + 22f * s, torsoY + 13f * s, 5f * s, 10f * s);
+        shapeRenderer.setColor(0.020f, 0.022f, 0.026f, 1f);
+        shapeRenderer.rect(x + 7f * s, torsoY + 28f * s, 27f * s, 8f * s);
+        shapeRenderer.rect(x + 5f * s, torsoY + 22f * s, 31f * s, 7f * s);
+
+        shapeRenderer.setColor(0.090f, 0.095f, 0.105f, 1f);
+        float attackLift = attackDirection == AttackDirection.UP ? 11f * attackPose : attackDirection == AttackDirection.DOWN ? -9f * attackPose : 0f;
+        shapeRenderer.rect(x + (dir > 0 ? 2f : 31f) * s + dir * 7f * attackPose, y + (24f + walk * 3f + attackLift) * s, 7f * s, 20f * s);
+        shapeRenderer.rect(x + (dir > 0 ? 31f : 2f) * s, y + (24f - walk * 2f) * s, 7f * s, 18f * s);
+        shapeRenderer.setColor(0.88f, 0.78f, 0.63f, 1f);
+        shapeRenderer.rect(x + (dir > 0 ? 3f : 32f) * s + dir * 11f * attackPose, y + (20f + walk * 3f + attackLift) * s, 6f * s, 5f * s);
+        shapeRenderer.rect(x + (dir > 0 ? 32f : 3f) * s, y + (20f - walk * 2f) * s, 6f * s, 5f * s);
+
+        shapeRenderer.setColor(0.070f, 0.075f, 0.082f, 1f);
+        shapeRenderer.rect(x + (8f + walk * 7f) * s, y + (3f + jumpPose * 4f) * s, 9f * s, 16f * s);
+        shapeRenderer.rect(x + (23f + counterWalk * 7f) * s, y + (3f - jumpPose * 2f) * s, 9f * s, 16f * s);
+        shapeRenderer.setColor(0.030f, 0.034f, 0.038f, 1f);
+        shapeRenderer.rect(x + (6f + walk * 7f) * s, y, 13f * s, 6f * s);
+        shapeRenderer.rect(x + (21f + counterWalk * 7f) * s, y, 13f * s, 6f * s);
+
+        shapeRenderer.setColor(0.92f + hurtTint, 0.80f - hurtTint * 0.25f, 0.62f - hurtTint * 0.25f, 1f);
+        shapeRenderer.rect(x + 11f * s, headY, 19f * s, 16f * s);
+        shapeRenderer.setColor(0.95f, 0.80f, 0.22f, 1f);
+        shapeRenderer.rect(x + 8f * s, headY + 11f * s, 25f * s, 10f * s);
+        shapeRenderer.rect(x + 6f * s, headY + 6f * s, 9f * s, 11f * s);
+        shapeRenderer.rect(x + 26f * s, headY + 6f * s, 8f * s, 9f * s);
+        shapeRenderer.setColor(0.70f, 0.54f, 0.12f, 1f);
+        shapeRenderer.rect(x + (dir > 0 ? 27f : 9f) * s, headY + 16f * s, 7f * s, 4f * s);
+        shapeRenderer.rect(x + (dir > 0 ? 9f : 27f) * s, headY + 13f * s, 5f * s, 4f * s);
+        shapeRenderer.setColor(0.020f, 0.022f, 0.026f, 1f);
+        shapeRenderer.rect(x + 10f * s, headY - 1f * s, 22f * s, 5f * s);
+        shapeRenderer.setColor(0.54f, 0.82f, 0.92f, 1f);
+        shapeRenderer.rect(x + (dir > 0 ? 23f : 13f) * s, headY + 6f * s, 4f * s, 4f * s);
+        shapeRenderer.setColor(0.015f, 0.017f, 0.020f, 1f);
+        shapeRenderer.rect(x + (dir > 0 ? 21f : 17f) * s, headY + 5f * s, 2f * s, 5f * s);
     }
 
     private void renderHud() {
         font.setColor(Color.WHITE);
-        String place;
-        if (locationIndex == -1) {
-            place = "Комната";
-        } else
-        if (locationIndex == 0) {
-            place = "Часовня голода";
-        } else if (locationIndex == 1) {
-            place = "Ангельский двигатель";
-        } else {
-            place = "Подземные кельи";
-        }
+        String place = LocationId.fromIndex(locationIndex).getDisplayName();
         font.draw(batch, place, 22, uiCamera.viewportHeight - 18f);
-        font.draw(batch, "A/D ходьба | SPACE прыжок | E говорить/использовать | TAB инвентарь", 22, uiCamera.viewportHeight - 44f);
-        if (knifeCollected) {
-            font.draw(batch, "ЛКМ - удар ножом", 22, uiCamera.viewportHeight - 70f);
+        font.draw(batch, "A/D \u0445\u043e\u0434\u044c\u0431\u0430 | SPACE \u043f\u0440\u044b\u0436\u043e\u043a | E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 | TAB \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c", 22, uiCamera.viewportHeight - 44f);
+        font.draw(batch, "W/S + \u041b\u041a\u041c: \u0443\u0434\u0430\u0440 \u0432\u0432\u0435\u0440\u0445/\u0432\u043d\u0438\u0437 | 1-4: \u043f\u0440\u0435\u0434\u043c\u0435\u0442 \u0432 \u0440\u0443\u043a\u0430\u0445", 22, uiCamera.viewportHeight - 70f);
+        WeaponType selectedWeapon = inventorySystem.getSelectedWeapon();
+        if (selectedWeapon != null) {
+            font.draw(batch, "\u0412 \u0440\u0443\u043a\u0430\u0445: " + selectedWeapon.getDisplayName() + " | \u041b\u041a\u041c: \u0443\u0434\u0430\u0440", 22, uiCamera.viewportHeight - 96f);
+        } else if (!inventorySystem.isEmpty()) {
+            font.draw(batch, "\u0420\u0443\u043a\u0438 \u043f\u0443\u0441\u0442\u044b: \u0432\u044b\u0431\u0435\u0440\u0438 \u043e\u0440\u0443\u0436\u0438\u0435 \u0432 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u0435", 22, uiCamera.viewportHeight - 96f);
         }
 
         if (!dialogueVisible) {
             if (locationIndex == -1 && isNear(player.getBounds(), BEDROOM_BED, 80f)) {
-                font.draw(batch, lyingInBed ? "Нажми E, чтобы встать" : "Нажми E, чтобы лечь", uiCamera.viewportWidth / 2f - 112f, 116f);
+                font.draw(batch, lyingInBed ? "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u0441\u0442\u0430\u0442\u044c" : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u043b\u0435\u0447\u044c", uiCamera.viewportWidth / 2f - 112f, 116f);
             }
             if (locationIndex == 0 && isNear(player.getBounds(), SCHOLAR_BOUNDS, 80f)) {
-                font.draw(batch, "Нажми E", uiCamera.viewportWidth / 2f - 42f, 116f);
-            }
-            if (locationIndex == 0 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
-                font.draw(batch, "Нажми E, чтобы вернуться", uiCamera.viewportWidth / 2f - 112f, 92f);
+                font.draw(batch, "\u041d\u0430\u0436\u043c\u0438 E", uiCamera.viewportWidth / 2f - 42f, 116f);
             }
             Rectangle door = getActiveDoor();
             if (!lyingInBed && isNear(player.getBounds(), door, 70f)) {
-                font.draw(batch, "Нажми E, чтобы войти", uiCamera.viewportWidth / 2f - 96f, 92f);
+                font.draw(batch, doorLockedUntilPlayerMoves ? "\u041e\u0442\u043e\u0439\u0434\u0438 \u043e\u0442 \u0434\u0432\u0435\u0440\u0438 \u0438 \u0432\u0435\u0440\u043d\u0438\u0441\u044c" : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438", uiCamera.viewportWidth / 2f - 112f, 92f);
             }
         }
     }
@@ -1644,14 +1964,14 @@ public class FirstScreen implements Screen {
     }
 
     private void renderPrologueTitle() {
-        if (!prologueActive || dialogueLine >= PROLOGUE_TITLES.length) {
+        if (!prologueActive || dialogueLine >= DialogueScripts.PROLOGUE_TITLES.length) {
             return;
         }
 
         font.setColor(0.96f, 0.86f, 0.72f, 1f);
-        font.draw(batch, PROLOGUE_TITLES[dialogueLine], uiCamera.viewportWidth / 2f - 150f, uiCamera.viewportHeight - 54f);
+        font.draw(batch, DialogueScripts.PROLOGUE_TITLES[dialogueLine], uiCamera.viewportWidth / 2f - 150f, uiCamera.viewportHeight - 54f);
         font.setColor(0.86f, 0.14f, 0.12f, 1f);
-        font.draw(batch, "E - дальше", uiCamera.viewportWidth - 132f, uiCamera.viewportHeight - 54f);
+        font.draw(batch, "E - \u0434\u0430\u043b\u044c\u0448\u0435", uiCamera.viewportWidth - 132f, uiCamera.viewportHeight - 54f);
     }
 
     private void renderUiPanels() {
@@ -1725,7 +2045,7 @@ public class FirstScreen implements Screen {
         }
 
         font.setColor(0.94f, 0.90f, 0.82f, 1f);
-        font.draw(batch, "Пауза", VIRTUAL_WIDTH / 2f - 34f, VIRTUAL_HEIGHT / 2f + 204f);
+        font.draw(batch, "\u041f\u0430\u0443\u0437\u0430", VIRTUAL_WIDTH / 2f - 34f, VIRTUAL_HEIGHT / 2f + 204f);
 
         for (int i = 0; i < pauseButtonBounds.length; i++) {
             Rectangle bounds = pauseButtonBounds[i];
@@ -1735,66 +2055,108 @@ public class FirstScreen implements Screen {
 
         if (pausePanel == PausePanel.ACHIEVEMENTS) {
             font.setColor(0.90f, 0.94f, 0.88f, 1f);
-            font.draw(batch, "Достижения", VIRTUAL_WIDTH / 2f - 78f, VIRTUAL_HEIGHT / 2f - 94f);
+            font.draw(batch, "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f", VIRTUAL_WIDTH / 2f - 78f, VIRTUAL_HEIGHT / 2f - 94f);
             font.setColor(0.70f, 0.78f, 0.74f, 1f);
-            font.draw(batch, "Паломник | Осколок света | Подземный зов", VIRTUAL_WIDTH / 2f - 184f, VIRTUAL_HEIGHT / 2f - 126f);
-            font.draw(batch, "Прогресс будет отмечаться по ходу игры.", VIRTUAL_WIDTH / 2f - 168f, VIRTUAL_HEIGHT / 2f - 154f);
+            font.draw(batch, "\u041f\u0430\u043b\u043e\u043c\u043d\u0438\u043a | \u041e\u0441\u043a\u043e\u043b\u043e\u043a \u0441\u0432\u0435\u0442\u0430 | \u041f\u043e\u0434\u0437\u0435\u043c\u043d\u044b\u0439 \u0437\u043e\u0432", VIRTUAL_WIDTH / 2f - 184f, VIRTUAL_HEIGHT / 2f - 126f);
+            font.draw(batch, "\u041f\u0440\u043e\u0433\u0440\u0435\u0441\u0441 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043c\u0435\u0447\u0430\u0442\u044c\u0441\u044f \u043f\u043e \u0445\u043e\u0434\u0443 \u0438\u0433\u0440\u044b.", VIRTUAL_WIDTH / 2f - 168f, VIRTUAL_HEIGHT / 2f - 154f);
         } else if (pausePanel == PausePanel.SETTINGS) {
             font.setColor(0.90f, 0.94f, 0.88f, 1f);
-            font.draw(batch, "Настройки", VIRTUAL_WIDTH / 2f - 68f, VIRTUAL_HEIGHT / 2f - 94f);
+            font.draw(batch, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438", VIRTUAL_WIDTH / 2f - 68f, VIRTUAL_HEIGHT / 2f - 94f);
             font.setColor(0.70f, 0.78f, 0.74f, 1f);
-            font.draw(batch, "Раздел в разработке.", VIRTUAL_WIDTH / 2f - 102f, VIRTUAL_HEIGHT / 2f - 126f);
-            font.draw(batch, "Нажмите Escape или Продолжить, чтобы вернуться.", VIRTUAL_WIDTH / 2f - 208f, VIRTUAL_HEIGHT / 2f - 154f);
+            font.draw(batch, "\u0420\u0430\u0437\u0434\u0435\u043b \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435.", VIRTUAL_WIDTH / 2f - 102f, VIRTUAL_HEIGHT / 2f - 126f);
+            font.draw(batch, "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 Escape \u0438\u043b\u0438 \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f.", VIRTUAL_WIDTH / 2f - 208f, VIRTUAL_HEIGHT / 2f - 154f);
         }
     }
 
     private String getPauseButtonLabel(int index) {
         if (index == 3) {
-            return "Сохранить";
+            return "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c";
         }
         if (index == 4) {
-            return "Продолжить";
+            return "\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c";
         }
         return PAUSE_BUTTON_LABELS[index];
     }
 
     private void renderInventoryPanel() {
-        float panelX = uiCamera.viewportWidth / 2f - 320f;
-        float panelY = uiCamera.viewportHeight / 2f - 215f;
+        float panelX = getInventoryPanelX();
+        float panelY = getInventoryPanelY();
 
-        shapeRenderer.setColor(0.018f, 0.022f, 0.024f, 1f);
-        shapeRenderer.rect(panelX, panelY, 640f, 430f);
+        shapeRenderer.setColor(0.004f, 0.006f, 0.008f, 0.62f);
+        shapeRenderer.rect(panelX - 14f, panelY - 14f, INVENTORY_PANEL_WIDTH + 28f, INVENTORY_PANEL_HEIGHT + 28f);
+        shapeRenderer.setColor(0.018f, 0.022f, 0.024f, 0.98f);
+        shapeRenderer.rect(panelX, panelY, INVENTORY_PANEL_WIDTH, INVENTORY_PANEL_HEIGHT);
         shapeRenderer.setColor(0.42f, 0.54f, 0.49f, 1f);
-        shapeRenderer.rect(panelX, panelY + 392f, 640f, 8f);
+        shapeRenderer.rect(panelX, panelY + INVENTORY_PANEL_HEIGHT - 38f, INVENTORY_PANEL_WIDTH, 8f);
+        shapeRenderer.setColor(0.58f, 0.12f, 0.10f, 0.92f);
+        shapeRenderer.rect(panelX, panelY + 10f, INVENTORY_PANEL_WIDTH, 4f);
         shapeRenderer.setColor(0.075f, 0.087f, 0.087f, 1f);
-        shapeRenderer.rect(panelX + 46f, panelY + 92f, 190f, 250f);
-        shapeRenderer.setColor(0.30f, 0.43f, 0.38f, 1f);
-        shapeRenderer.rect(panelX + 58f, panelY + 104f, 166f, 226f);
+        shapeRenderer.rect(panelX + 42f, panelY + 122f, 222f, 246f);
+        shapeRenderer.setColor(0.25f, 0.36f, 0.33f, 1f);
+        shapeRenderer.rect(panelX + 56f, panelY + 136f, 194f, 218f);
 
-        drawHero(panelX + 124f, panelY + 144f, 2.2f, MathUtils.sin(time * 4f) * 80f, false);
+        for (int i = 0; i < InventorySystem.BAG_SLOT_COUNT; i++) {
+            Rectangle slot = getBagSlotBounds(i);
+            drawSlot(slot.x, slot.y, false, false);
+        }
 
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 4; col++) {
-                drawSlot(panelX + 340f + col * 54f, panelY + 210f - row * 54f);
+        for (int i = 0; i < InventorySystem.WEAPON_SLOT_COUNT; i++) {
+            Rectangle slot = getHandSlotBounds(i);
+            drawSlot(slot.x, slot.y, i == inventorySystem.getSelectedWeaponSlot(), true);
+        }
+
+        WeaponType[] handWeapons = inventorySystem.getWeaponSlots();
+        for (int i = 0; i < handWeapons.length; i++) {
+            if (handWeapons[i] != null) {
+                Rectangle slot = getHandSlotBounds(i);
+                drawWeaponIcon(handWeapons[i], slot.x + 8f, slot.y + 10f, 34f, true);
             }
         }
 
-        for (int col = 0; col < 6; col++) {
-            drawSlot(panelX + 164f + col * 54f, panelY + 28f);
+        WeaponType[] bagWeapons = inventorySystem.getBagSlots();
+        for (int i = 0; i < bagWeapons.length; i++) {
+            if (bagWeapons[i] != null) {
+                Rectangle slot = getBagSlotBounds(i);
+                drawWeaponIcon(bagWeapons[i], slot.x + 8f, slot.y + 10f, 34f, false);
+            }
+        }
+
+        if (draggedWeapon != null) {
+            pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
+            hudViewport.unproject(pointer);
+            drawWeaponIcon(draggedWeapon, pointer.x - 18f, pointer.y - 18f, 38f, true);
         }
     }
 
-    private void drawSlot(float x, float y) {
-        shapeRenderer.setColor(0.055f, 0.065f, 0.065f, 1f);
-        shapeRenderer.rect(x, y, 46f, 46f);
-        shapeRenderer.setColor(0.15f, 0.18f, 0.17f, 1f);
-        shapeRenderer.rect(x + 4f, y + 4f, 38f, 38f);
+    private void drawSlot(float x, float y, boolean selected, boolean handSlot) {
+        if (selected) {
+            shapeRenderer.setColor(0.82f, 0.72f, 0.44f, 1f);
+        } else if (handSlot) {
+            shapeRenderer.setColor(0.32f, 0.44f, 0.42f, 1f);
+        } else {
+            shapeRenderer.setColor(0.055f, 0.065f, 0.065f, 1f);
+        }
+        shapeRenderer.rect(x, y, INVENTORY_SLOT_SIZE, INVENTORY_SLOT_SIZE);
+        shapeRenderer.setColor(selected ? 0.18f : 0.15f, selected ? 0.16f : 0.18f, selected ? 0.10f : 0.17f, 1f);
+        shapeRenderer.rect(x + 5f, y + 5f, INVENTORY_SLOT_SIZE - 10f, INVENTORY_SLOT_SIZE - 10f);
+        shapeRenderer.setColor(0.88f, 0.95f, 0.88f, selected ? 0.34f : 0.12f);
+        shapeRenderer.rect(x + 6f, y + INVENTORY_SLOT_SIZE - 10f, INVENTORY_SLOT_SIZE - 12f, 3f);
+    }
+
+    private void drawWeaponIcon(WeaponType weapon, float x, float y, float size, boolean bright) {
+        float glow = bright ? 1f : 0.72f;
+        shapeRenderer.setColor(weapon.getColorR() * glow, weapon.getColorG() * glow, weapon.getColorB() * glow, 1f);
+        shapeRenderer.rectLine(x + 7f, y + 6f, x + size - 5f, y + size - 8f, 5f);
+        shapeRenderer.setColor(0.16f, 0.10f, 0.08f, 1f);
+        shapeRenderer.rectLine(x + 2f, y + 3f, x + 12f, y + 13f, 6f);
+        shapeRenderer.setColor(0.94f, 0.96f, 0.88f, 0.86f);
+        shapeRenderer.circle(x + size - 5f, y + size - 8f, 3f, 10);
     }
 
     private void renderDialoguePortraits(float pulse) {
         boolean adamSpeaking = "???".equals(currentSpeakers[dialogueLine]);
-        boolean bookSpeaking = "Священная книга".equals(currentSpeakers[dialogueLine]);
-        boolean engineSpeaking = "Ангельский двигатель".equals(currentSpeakers[dialogueLine]);
+        boolean bookSpeaking = "\u0421\u0432\u044f\u0449\u0435\u043d\u043d\u0430\u044f \u043a\u043d\u0438\u0433\u0430".equals(currentSpeakers[dialogueLine]);
+        boolean engineSpeaking = "\u0410\u043d\u0433\u0435\u043b\u044c\u0441\u043a\u0438\u0439 \u0434\u0432\u0438\u0433\u0430\u0442\u0435\u043b\u044c".equals(currentSpeakers[dialogueLine]);
         float leftLift = adamSpeaking ? 8f + pulse * 4f : 0f;
         float rightLift = !adamSpeaking ? 8f + pulse * 4f : 0f;
 
@@ -1849,26 +2211,36 @@ public class FirstScreen implements Screen {
         String visibleText = currentText[dialogueLine].substring(0, getVisibleDialogueCharacters());
         font.setColor(0.90f, 0.94f, 0.88f, 1f);
         font.draw(batch, speaker + ":", 176f, 146f);
-        drawWrappedText(visibleText, 176f, 116f, 70, 26f);
+        drawWrappedText(visibleText, 176f, 116f, width - 350f, 26f, 4);
         font.setColor(0.62f, 0.78f, 0.72f, 1f);
         font.draw(batch, "E", width - 116f, 76f);
-        font.draw(batch, getVisibleDialogueCharacters() < currentText[dialogueLine].length() ? "пропуск" : "дальше", width - 96f, 76f);
+        font.draw(batch, getVisibleDialogueCharacters() < currentText[dialogueLine].length() ? "\u043f\u0440\u043e\u043f\u0443\u0441\u043a" : "\u0434\u0430\u043b\u044c\u0448\u0435", width - 96f, 76f);
     }
 
-    private void drawWrappedText(String text, float x, float y, int maxChars, float lineHeight) {
-        String remaining = text;
+    private void drawWrappedText(String text, float x, float y, float maxWidth, float lineHeight, int maxLines) {
+        String[] words = text.split(" ");
+        StringBuilder lineText = new StringBuilder();
         int line = 0;
-        while (remaining.length() > maxChars && line < 3) {
-            int splitAt = remaining.lastIndexOf(' ', maxChars);
-            if (splitAt <= 0) {
-                splitAt = maxChars;
+
+        for (String word : words) {
+            String candidate = lineText.length() == 0 ? word : lineText + " " + word;
+            glyphLayout.setText(font, candidate);
+            if (glyphLayout.width > maxWidth && lineText.length() > 0) {
+                font.draw(batch, lineText.toString(), x, y - line * lineHeight);
+                line++;
+                if (line >= maxLines) {
+                    return;
+                }
+                lineText.setLength(0);
+                lineText.append(word);
+            } else {
+                lineText.setLength(0);
+                lineText.append(candidate);
             }
-            font.draw(batch, remaining.substring(0, splitAt), x, y - line * lineHeight);
-            remaining = remaining.substring(splitAt).trim();
-            line++;
         }
-        if (!remaining.isEmpty() && line < 4) {
-            font.draw(batch, remaining, x, y - line * lineHeight);
+
+        if (lineText.length() > 0 && line < maxLines) {
+            font.draw(batch, lineText.toString(), x, y - line * lineHeight);
         }
     }
 
@@ -1898,6 +2270,9 @@ public class FirstScreen implements Screen {
         shapeRenderer.dispose();
         batch.dispose();
         font.dispose();
+        if (heroTexture != null) {
+            heroTexture.dispose();
+        }
     }
 
     private enum PausePanel {
@@ -1905,4 +2280,17 @@ public class FirstScreen implements Screen {
         ACHIEVEMENTS,
         SETTINGS
     }
+
+    private enum InventoryDragSource {
+        NONE,
+        HAND,
+        BAG
+    }
+
+    private enum AttackDirection {
+        FORWARD,
+        UP,
+        DOWN
+    }
 }
+

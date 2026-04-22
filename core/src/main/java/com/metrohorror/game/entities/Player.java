@@ -12,6 +12,7 @@ public final class Player {
     private boolean facingRight = true;
     private int health = Constants.PLAYER_MAX_HEALTH;
     private float damageFlashTimer;
+    private float animationTime;
 
     private final Rectangle bounds;
 
@@ -25,6 +26,8 @@ public final class Player {
     public void update(float delta) {
         x += velocityX * delta;
         y += velocityY * delta;
+        float speedRatio = Math.min(1f, Math.abs(velocityX) / Constants.PLAYER_SPEED);
+        animationTime += delta * (onGround ? 2.4f + speedRatio * 5.2f : 2f);
         damageFlashTimer = Math.max(0f, damageFlashTimer - delta);
         updateBounds();
     }
@@ -97,6 +100,11 @@ public final class Player {
         onGround = false;
     }
 
+    public void bounceFromDownAttack(float power) {
+        velocityY = power;
+        onGround = false;
+    }
+
     public boolean isOnGround() {
         return onGround;
     }
@@ -133,5 +141,9 @@ public final class Player {
 
     public boolean isRecentlyDamaged() {
         return damageFlashTimer > 0f;
+    }
+
+    public float getAnimationTime() {
+        return animationTime;
     }
 }

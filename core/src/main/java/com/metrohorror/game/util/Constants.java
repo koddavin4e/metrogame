@@ -13,8 +13,8 @@ public class Constants {
     public static final float PLAYER_JUMP_POWER = 560f;
     public static final float GRAVITY = -1200f;
 
-    public static final float ENEMY_WIDTH = 40f;
-    public static final float ENEMY_HEIGHT = 60f;
+    public static final float ENEMY_WIDTH = 32f;
+    public static final float ENEMY_HEIGHT = 52f;
     public static final float ENEMY_SPEED = 120f;
     public static final float ENEMY_AGGRO_RANGE = 340f;
     public static final float ENEMY_ATTACK_RANGE = 58f;
