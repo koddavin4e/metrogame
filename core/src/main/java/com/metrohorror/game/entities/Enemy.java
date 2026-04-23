@@ -43,6 +43,7 @@ public class Enemy {
     private float alertness;
     private float decisionTimer;
     private float strafeDirection = 1f;
+    private float damageFlashTimer;
     private boolean lootDropped;
     private final AttackStyle attackStyle;
 
@@ -78,6 +79,7 @@ public class Enemy {
     public void update(float delta) {
         attackCooldown = Math.max(0f, attackCooldown - delta);
         attackAnimationTimer = Math.max(0f, attackAnimationTimer - delta);
+        damageFlashTimer = Math.max(0f, damageFlashTimer - delta);
         decisionTimer = Math.max(0f, decisionTimer - delta);
         bounds.setPosition(x, y);
     }
@@ -86,6 +88,7 @@ public class Enemy {
         if (!alive) return;
 
         health -= damage;
+        damageFlashTimer = 0.22f;
         if (health <= 0) {
             alive = false;
         }
@@ -183,6 +186,14 @@ public class Enemy {
 
     public boolean isAttacking() {
         return attackAnimationTimer > 0f;
+    }
+
+    public boolean isRecentlyDamaged() {
+        return damageFlashTimer > 0f;
+    }
+
+    public float getDamageFlashTimer() {
+        return damageFlashTimer;
     }
 
     public float getAlertness() {

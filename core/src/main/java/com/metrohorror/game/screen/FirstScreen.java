@@ -51,6 +51,7 @@ public class FirstScreen implements Screen {
     private static final float TYPE_SPEED = 42f;
     private static final int KNIFE_DAMAGE = 2;
     private static final int KILL_HEAL_AMOUNT = 5;
+    private static final float KNIFE_FORWARD_RANGE_BONUS = 28f;
     private static final float DOWN_ATTACK_BOUNCE = 520f;
     private static final float RESPAWN_X_OFFSET = 120f;
     private static final float PAUSE_MENU_WIDTH = 360f;
@@ -64,7 +65,7 @@ public class FirstScreen implements Screen {
     private static final int HERO_FRAME_SIZE = 128;
     private static final int HERO_FRAME_COUNT = 17;
     private static final float HERO_BODY_DRAW_WIDTH = 88f;
-    private static final float HERO_ATTACK_DRAW_WIDTH = 136f;
+    private static final float HERO_ATTACK_DRAW_WIDTH = HERO_BODY_DRAW_WIDTH;
     private static final float HERO_DRAW_HEIGHT = 96f;
     private static final int SAVE_SLOT_COUNT = 3;
     private static final String SAVE_PREFERENCES = "metrohorror-saves";
@@ -187,9 +188,12 @@ public class FirstScreen implements Screen {
         if (!prologueActive) {
             worldViewport.apply();
             shapeRenderer.setProjectionMatrix(camera.combined);
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             renderWorld();
             shapeRenderer.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
 
             batch.setProjectionMatrix(camera.combined);
             batch.begin();
@@ -385,6 +389,9 @@ public class FirstScreen implements Screen {
             if (handSlot >= 0) {
                 draggedWeapon = inventorySystem.takeWeaponFromHand(handSlot);
                 if (draggedWeapon != null) {
+                    if (handSlot == inventorySystem.getSelectedWeaponSlot()) {
+                        cancelKnifeSwing();
+                    }
                     inventoryDragSource = InventoryDragSource.HAND;
                     inventoryDragSlot = handSlot;
                 }
@@ -458,6 +465,11 @@ public class FirstScreen implements Screen {
         draggedWeapon = null;
         inventoryDragSource = InventoryDragSource.NONE;
         inventoryDragSlot = -1;
+    }
+
+    private void cancelKnifeSwing() {
+        knifeSwingTimer = 0f;
+        knifeDamageApplied = false;
     }
 
     private int getHandSlotAt(float x, float y) {
@@ -857,6 +869,7 @@ public class FirstScreen implements Screen {
             renderDoor(DUNGEON_RETURN_DOOR, 0.34f, 0.19f, 0.12f);
             renderDungeonEnemies();
         }
+        renderKnifeSlash();
 
     }
 
@@ -911,7 +924,7 @@ public class FirstScreen implements Screen {
                     playerBounds.width + 20f, range);
         }
 
-        float width = range;
+        float width = range + KNIFE_FORWARD_RANGE_BONUS;
         float height = 54f;
         float x = player.isFacingRight()
                 ? playerBounds.x + playerBounds.width - 2f
@@ -1100,10 +1113,19 @@ public class FirstScreen implements Screen {
         float attackProgress = enemy.isAttacking() ? enemy.getAttackProgress() : 0f;
         boolean heavy = enemy.getAttackStyle() == Enemy.AttackStyle.HEAVY;
         boolean lunge = enemy.getAttackStyle() == Enemy.AttackStyle.LUNGE;
+        float hitFlash = enemy.isRecentlyDamaged() ? MathUtils.clamp(enemy.getDamageFlashTimer() / 0.22f, 0f, 1f) : 0f;
 
-        shapeRenderer.setColor(enemy.getSkinR(), enemy.getSkinG(), enemy.getSkinB(), 1f);
+        shapeRenderer.setColor(
+                MathUtils.lerp(enemy.getSkinR(), 1f, hitFlash * 0.85f),
+                MathUtils.lerp(enemy.getSkinG(), 0.18f, hitFlash * 0.85f),
+                MathUtils.lerp(enemy.getSkinB(), 0.12f, hitFlash * 0.85f),
+                1f);
         shapeRenderer.rect(x + 7f, y + 39f + breathe, 18f, 18f);
-        shapeRenderer.setColor(enemy.getCoatR(), enemy.getCoatG(), enemy.getCoatB(), 1f);
+        shapeRenderer.setColor(
+                MathUtils.lerp(enemy.getCoatR(), 0.92f, hitFlash),
+                MathUtils.lerp(enemy.getCoatG(), 0.05f, hitFlash),
+                MathUtils.lerp(enemy.getCoatB(), 0.04f, hitFlash),
+                1f);
         shapeRenderer.rect(x + 1f, y + 8f, 30f, 36f + breathe * 0.3f);
         shapeRenderer.setColor(0.025f, 0.025f, 0.030f, 1f);
         shapeRenderer.rect(x + 4f, y + 47f + breathe, 26f, 7f);
@@ -1128,6 +1150,14 @@ public class FirstScreen implements Screen {
         shapeRenderer.setColor(0.055f, 0.058f, 0.064f, 1f);
         shapeRenderer.rect(x + 4f + walk, y, 9f, 13f);
         shapeRenderer.rect(x + 20f - walk, y, 9f, 13f);
+
+        if (hitFlash > 0f) {
+            shapeRenderer.setColor(1f, 0.04f, 0.03f, 0.82f * hitFlash);
+            shapeRenderer.rectLine(x - 5f, y + 63f, x + 37f, y + 72f, 5f);
+            shapeRenderer.rectLine(x + 37f, y + 63f, x - 5f, y + 72f, 4f);
+            shapeRenderer.setColor(1f, 0.72f, 0.58f, 0.92f * hitFlash);
+            shapeRenderer.rectLine(x + 2f, y + 68f, x + 30f, y + 68f, 2.5f);
+        }
     }
 
     private void renderKnifeSlash() {
@@ -1140,6 +1170,7 @@ public class FirstScreen implements Screen {
         float centerX = player.getBounds().x + player.getBounds().width * 0.5f;
         float centerY = player.getBounds().y + player.getBounds().height * 0.58f;
         float range = weapon.getRange();
+        float forwardRange = range + KNIFE_FORWARD_RANGE_BONUS;
         float fade = MathUtils.sin(progress * MathUtils.PI);
 
         float startX = centerX + dir * 10f;
@@ -1154,8 +1185,38 @@ public class FirstScreen implements Screen {
             endY = player.getBounds().y - range * 0.62f;
             startY = player.getBounds().y + 18f;
         } else {
-            endX = centerX + dir * (range + 18f);
-            endY = centerY + MathUtils.lerp(-18f, 18f, progress);
+            float arcCenterX = centerX + dir * 20f;
+            float arcCenterY = centerY + MathUtils.lerp(-4f, 5f, progress);
+            float radiusX = forwardRange + 16f;
+            float radiusY = 31f;
+            float startAngle = -1.05f + progress * 0.42f;
+            float endAngle = 1.05f + progress * 0.42f;
+            float previousX = 0f;
+            float previousY = 0f;
+
+            for (int i = 0; i <= 10; i++) {
+                float t = i / 10f;
+                float angle = MathUtils.lerp(startAngle, endAngle, t);
+                float px = arcCenterX + dir * (24f + MathUtils.cos(angle) * radiusX);
+                float py = arcCenterY + MathUtils.sin(angle) * radiusY;
+                if (i > 0) {
+                    shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
+                    shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
+                    shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
+                    shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
+                    shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
+                    shapeRenderer.rectLine(previousX + dir * 1.5f, previousY + 1.5f, px + dir * 1.5f, py + 1.5f, 2.8f);
+                }
+                previousX = px;
+                previousY = py;
+            }
+
+            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.42f * fade);
+            shapeRenderer.triangle(
+                    arcCenterX + dir * 30f, arcCenterY - 24f,
+                    arcCenterX + dir * (forwardRange + 54f), arcCenterY,
+                    arcCenterX + dir * 30f, arcCenterY + 26f);
+            return;
         }
 
         shapeRenderer.setColor(0.18f, 0.10f, 0.08f, fade);
@@ -1779,9 +1840,14 @@ public class FirstScreen implements Screen {
 
         if (locationIndex == -1 && lyingInBed) {
             frame = heroFrames[0];
-            drawWidth = 126f;
-            drawHeight = 86f;
-            batch.draw(frame, BEDROOM_BED.x + 72f, BEDROOM_BED.y + 22f, drawWidth, drawHeight);
+            drawWidth = HERO_BODY_DRAW_WIDTH;
+            drawHeight = HERO_DRAW_HEIGHT;
+            float centerX = BEDROOM_BED.x + 124f;
+            float centerY = BEDROOM_BED.y + 54f;
+            float x = centerX - drawWidth * 0.5f;
+            float y = centerY - drawHeight * 0.5f;
+            batch.draw(frame, x, y, drawWidth * 0.5f, drawHeight * 0.5f,
+                    drawWidth, drawHeight, 1f, 1f, -90f);
             return;
         }
 
@@ -1822,7 +1888,7 @@ public class FirstScreen implements Screen {
         }
 
         if (weapon != null) {
-            return 8;
+            return 8 + (int)(player.getAnimationTime() * 0.45f) % 3;
         }
         return 1;
     }
@@ -2293,4 +2359,3 @@ public class FirstScreen implements Screen {
         DOWN
     }
 }
-
