@@ -3,7 +3,8 @@ package com.metrohorror.game.screen.location;
 public enum LocationId {
     BEDROOM(BedroomLocation.INDEX, BedroomLocation.DISPLAY_NAME),
     CHAPEL(ChapelLocation.INDEX, ChapelLocation.DISPLAY_NAME),
-    DUNGEON(DungeonLocation.INDEX, DungeonLocation.DISPLAY_NAME);
+    DUNGEON(DungeonLocation.INDEX, DungeonLocation.DISPLAY_NAME),
+    BOSS(BossLocation.INDEX, BossLocation.DISPLAY_NAME);
 
     private final int index;
     private final String displayName;

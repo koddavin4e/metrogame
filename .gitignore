@@ -1,5 +1,6 @@
 ## Gradle:
 .gradle/
+.gradle-local/
 gradle-app.setting
 .gradle-user-home/
 /build/

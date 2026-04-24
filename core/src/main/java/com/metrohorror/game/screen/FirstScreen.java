@@ -22,6 +22,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.metrohorror.game.MetroHorrorGame;
 import com.metrohorror.game.entities.Enemy;
+import com.metrohorror.game.entities.FinalBoss;
 import com.metrohorror.game.entities.Player;
 import com.metrohorror.game.entities.WeaponType;
 import com.metrohorror.game.screen.dialogue.DialogueScripts;
@@ -39,7 +40,7 @@ public class FirstScreen implements Screen {
     private static final float VIRTUAL_HEIGHT = 720f;
     private static final Rectangle SCHOLAR_BOUNDS = new Rectangle(610f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 42f, 72f);
     private static final Rectangle CHAPEL_BEDROOM_DOOR = new Rectangle(1096f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 96f, 156f);
-    private static final Rectangle CHAPEL_DOOR = new Rectangle(302f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 132f, 176f);
+    private static final Rectangle CHAPEL_DOOR = new Rectangle(648f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 108f, 176f);
     private static final Rectangle STREET_RETURN_DOOR = new Rectangle(314f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 94f, 170f);
     private static final Rectangle STREET_KNIFE_PICKUP = new Rectangle(2296f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 108f, 62f);
     private static final Rectangle BEDROOM_BED = new Rectangle(208f, Constants.GROUND_Y + Constants.GROUND_HEIGHT + 8f, 205f, 68f);
@@ -54,6 +55,7 @@ public class FirstScreen implements Screen {
     private static final float BEDROOM_PLAYER_SCALE = 1.5f;
     private static final float HALLWAY_PLAYER_SCALE = 1.5f;
     private static final float STREET_PLAYER_SCALE = 1.5f;
+    private static final float BOSS_PLAYER_SCALE = 1.5f;
     private static final float TV_REQUIRED_WATCH_TIME = 2.5f;
     private static final float HALLWAY_BACKGROUND_X = 260f;
     private static final float HALLWAY_BACKGROUND_Y = 0f;
@@ -69,6 +71,22 @@ public class FirstScreen implements Screen {
     private static final float STREET_LEFT_WALL = 286f;
     private static final float STREET_RIGHT_WALL = 2680f;
     private static final float STREET_PLAYER_EXIT_X = STREET_RETURN_DOOR.x + 18f;
+    private static final float BOSS_BACKGROUND_X = 150f;
+    // Lower the boss-room backdrop slightly so it lines up with the floor plane.
+    private static final float BOSS_BACKGROUND_Y = 0f;
+    private static final float BOSS_BACKGROUND_WIDTH = 2700f;
+    private static final float BOSS_BACKGROUND_HEIGHT = 960f;
+    private static final float BOSS_LEFT_WALL = 180f;
+    private static final float BOSS_RIGHT_WALL = 2820f;
+    private static final float BOSS_PLAYER_ENTRY_X = 240f;
+    private static final float BOSS_PLAYER_RETURN_X = STREET_RIGHT_WALL - 220f;
+    private static final float STREET_TO_BOSS_THRESHOLD = STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - 26f;
+    private static final float BOSS_ARENA_MIN_X = 390f;
+    private static final float BOSS_ARENA_MAX_X = 2640f;
+    // Keep both actors on the same visible floor line in the fourth room.
+    private static final float BOSS_ROOM_GROUND_TOP = Constants.GROUND_Y + Constants.GROUND_HEIGHT + 66f;
+    private static final float FINAL_BOSS_SPAWN_X = 2130f;
+    private static final float FINAL_BOSS_SPAWN_Y = BOSS_ROOM_GROUND_TOP;
     private static final float KNIFE_PICKUP_PROMPT_RANGE = 84f;
     private static final float TYPE_SPEED = 42f;
     private static final int KNIFE_DAMAGE = 2;
@@ -111,6 +129,7 @@ public class FirstScreen implements Screen {
     private Texture bedroomTexture;
     private Texture hallwayTexture;
     private Texture streetTexture;
+    private Texture bossTexture;
     private TextureRegion[] heroFrames;
     private final MetroHorrorGame game;
     private final int loadSlot;
@@ -119,6 +138,7 @@ public class FirstScreen implements Screen {
 
     private Player player;
     private Array<Enemy> dungeonEnemies;
+    private FinalBoss finalBoss;
     private GameMap baseMap;
     private GameMap dungeonMap;
     private GameMap gameMap;
@@ -192,6 +212,7 @@ public class FirstScreen implements Screen {
         loadBedroomTexture();
         loadHallwayTexture();
         loadStreetTexture();
+        loadBossTexture();
         setupPauseMenuBounds();
 
         player = new Player(140, 240);
@@ -230,8 +251,18 @@ public class FirstScreen implements Screen {
             batch.setProjectionMatrix(camera.combined);
             batch.begin();
             renderWorldTextures();
+            if (locationIndex == 4 && finalBoss != null) {
+                finalBoss.renderSprite(batch);
+            }
             renderPlayerSprite();
             batch.end();
+
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            renderWorldActors();
+            shapeRenderer.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
         }
 
         hudViewport.apply();
@@ -291,6 +322,8 @@ public class FirstScreen implements Screen {
         player.applyGravity(delta);
         player.update(delta);
         resolveWorldCollisions();
+        updateLocationTransitions();
+        updateCurrentLocationState(delta);
         updateDoorLock();
         checkTrashPileDiscovery();
         updateKnifeAttack();
@@ -801,6 +834,79 @@ public class FirstScreen implements Screen {
 
     }
 
+    private void updateLocationTransitions() {
+        float visualMarginX = getPlayerVisualMarginX();
+        if (locationIndex == 3 && player.getX() >= STREET_TO_BOSS_THRESHOLD - visualMarginX) {
+            enterBossLocation();
+        } else if (locationIndex == 4 && player.getX() <= BOSS_LEFT_WALL + visualMarginX) {
+            returnToStreetFromBoss();
+        }
+    }
+
+    private void enterBossLocation() {
+        locationIndex = 4;
+        gameMap = baseMap;
+        dialogueVisible = false;
+        dialogueTypeTimer = 0f;
+        inventoryVisible = false;
+        doorLockedUntilPlayerMoves = false;
+        player.setX(BOSS_PLAYER_ENTRY_X);
+        player.setY(getCurrentGroundTop());
+        player.setVelocityY(0f);
+        ensureFinalBossSpawned();
+        camera.position.x = player.getX();
+        camera.update();
+        clampCameraToCurrentLocation();
+    }
+
+    private void returnToStreetFromBoss() {
+        locationIndex = 3;
+        gameMap = baseMap;
+        dialogueVisible = false;
+        dialogueTypeTimer = 0f;
+        inventoryVisible = false;
+        doorLockedUntilPlayerMoves = false;
+        player.setX(BOSS_PLAYER_RETURN_X);
+        player.setY(getCurrentGroundTop());
+        player.setVelocityY(0f);
+        camera.position.x = player.getX();
+        camera.update();
+        clampCameraToCurrentLocation();
+    }
+
+    private void updateCurrentLocationState(float delta) {
+        if (locationIndex != 4) {
+            return;
+        }
+
+        ensureFinalBossSpawned();
+        finalBoss.update(delta, player, BOSS_ARENA_MIN_X, BOSS_ARENA_MAX_X, getCurrentGroundTop());
+        if (!player.isAlive()) {
+            respawnAtBossEntrance();
+        }
+    }
+
+    private void ensureFinalBossSpawned() {
+        if (finalBoss == null) {
+            // The boss is spawned lazily when the fourth location becomes active.
+            finalBoss = new FinalBoss(FINAL_BOSS_SPAWN_X, FINAL_BOSS_SPAWN_Y);
+        }
+    }
+
+    private void respawnAtBossEntrance() {
+        player.healToFull();
+        player.setX(BOSS_PLAYER_ENTRY_X + 40f);
+        player.setY(getCurrentGroundTop());
+        player.setVelocityY(0f);
+        knifeSwingTimer = 0f;
+        knifeDamageApplied = false;
+        ensureFinalBossSpawned();
+        finalBoss.reset(FINAL_BOSS_SPAWN_X, FINAL_BOSS_SPAWN_Y);
+        camera.position.x = player.getX();
+        camera.update();
+        clampCameraToCurrentLocation();
+    }
+
     private Rectangle getActiveDoor() {
         if (locationIndex == 1) {
             return BEDROOM_DOOR;
@@ -828,12 +934,22 @@ public class FirstScreen implements Screen {
         if (locationIndex == 3) {
             return STREET_PLAYER_SCALE;
         }
+        if (locationIndex == 4) {
+            return BOSS_PLAYER_SCALE;
+        }
         return 1f;
     }
 
     private float getPlayerVisualMarginX() {
         float drawWidth = Math.max(HERO_BODY_DRAW_WIDTH, HERO_ATTACK_DRAW_WIDTH) * getLocationPlayerScale();
         return Math.max(0f, drawWidth * 0.5f - Constants.PLAYER_WIDTH * 0.5f);
+    }
+
+    private float getCurrentGroundTop() {
+        if (locationIndex == 4) {
+            return BOSS_ROOM_GROUND_TOP;
+        }
+        return gameMap.getGround().y + gameMap.getGround().height;
     }
 
     private void clampCameraToCurrentLocation() {
@@ -850,6 +966,10 @@ public class FirstScreen implements Screen {
             float minX = STREET_LEFT_WALL + halfWidth;
             float maxX = STREET_RIGHT_WALL - halfWidth;
             camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
+        } else if (locationIndex == 4) {
+            float minX = BOSS_LEFT_WALL + halfWidth;
+            float maxX = BOSS_RIGHT_WALL - halfWidth;
+            camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
         } else {
             camera.position.x = MathUtils.clamp(camera.position.x, halfWidth, Constants.WORLD_WIDTH - halfWidth);
         }
@@ -860,7 +980,7 @@ public class FirstScreen implements Screen {
 
     private void resolveWorldCollisions() {
         boolean landed = false;
-        float groundTop = gameMap.getGround().y + gameMap.getGround().height;
+        float groundTop = getCurrentGroundTop();
         float ceilingY = Constants.WORLD_HEIGHT - Constants.PLAYER_HEIGHT - 6f;
         if (player.getBounds().y <= groundTop) {
             player.setY(groundTop);
@@ -906,6 +1026,10 @@ public class FirstScreen implements Screen {
             player.setX(STREET_LEFT_WALL + visualMarginX);
             return;
         }
+        if (locationIndex == 4 && player.getX() < BOSS_LEFT_WALL + visualMarginX) {
+            player.setX(BOSS_LEFT_WALL + visualMarginX);
+            return;
+        }
         if (player.getX() < 0) player.setX(0);
         if (locationIndex == 1 && player.getX() > BEDROOM_COLLISION_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
             player.setX(BEDROOM_COLLISION_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
@@ -919,6 +1043,10 @@ public class FirstScreen implements Screen {
             player.setX(STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
             return;
         }
+        if (locationIndex == 4 && player.getX() > BOSS_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
+            player.setX(BOSS_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
+            return;
+        }
         if (player.getX() > Constants.WORLD_WIDTH - Constants.PLAYER_WIDTH) {
             player.setX(Constants.WORLD_WIDTH - Constants.PLAYER_WIDTH);
         }
@@ -929,12 +1057,21 @@ public class FirstScreen implements Screen {
             renderBedroom();
         } else if (locationIndex == 2) {
             renderRuinedChapelStation();
-        } else {
+        } else if (locationIndex == 3) {
             renderStreetExterior();
             renderStreetKnifePickup();
+        } else {
+            renderBossLaboratory();
         }
-        renderKnifeSlash();
+    }
 
+    private void renderWorldActors() {
+        // Draw shape-based actors after textured backgrounds so they are not hidden behind them.
+        if (locationIndex == 4 && finalBoss != null) {
+            finalBoss.render(shapeRenderer, time);
+        }
+        // Keep slash effects in the actor pass so left/right/up/down swings stay visible.
+        renderKnifeSlash();
     }
 
     private void checkTrashPileDiscovery() {
@@ -961,7 +1098,8 @@ public class FirstScreen implements Screen {
         if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
             return AttackDirection.UP;
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+        // Down slash is reserved for aerial attacks so it cannot be triggered from the ground.
+        if (!player.isOnGround() && (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN))) {
             return AttackDirection.DOWN;
         }
         return AttackDirection.FORWARD;
@@ -1010,6 +1148,30 @@ public class FirstScreen implements Screen {
                 knifeDamageApplied = true;
                 return;
             }
+        }
+
+        if (locationIndex == 4 && finalBoss != null && finalBoss.isAlive() && attackBounds.overlaps(finalBoss.getBounds())) {
+            Rectangle bossHeadBounds = finalBoss.getHeadBounds();
+            boolean attackingFromAbove = player.getBounds().y >= bossHeadBounds.y - 8f;
+            // Any top-side attack pressure is absorbed by the head and never converts into damage.
+            if (attackingFromAbove || ((attackDirection == AttackDirection.UP || attackDirection == AttackDirection.DOWN) && attackBounds.overlaps(bossHeadBounds))) {
+                finalBoss.absorbHeadPressure(player, weapon.getSwingDuration(), BOSS_LEFT_WALL, BOSS_RIGHT_WALL);
+                knifeDamageApplied = true;
+                return;
+            }
+            if (attackDirection == AttackDirection.UP) {
+                finalBoss.absorbHeadPressure(player, weapon.getSwingDuration(), BOSS_LEFT_WALL, BOSS_RIGHT_WALL);
+                knifeDamageApplied = true;
+                return;
+            }
+            finalBoss.takeDamage(Math.max(KNIFE_DAMAGE, weapon.getDamage()));
+            if (!finalBoss.isAlive()) {
+                player.heal(KILL_HEAL_AMOUNT);
+            }
+            if (attackDirection == AttackDirection.DOWN) {
+                player.bounceFromDownAttack(DOWN_ATTACK_BOUNCE);
+            }
+            knifeDamageApplied = true;
         }
     }
 
@@ -1236,70 +1398,70 @@ public class FirstScreen implements Screen {
         float fade = MathUtils.sin(progress * MathUtils.PI);
 
         if (attackDirection == AttackDirection.UP) {
-            float arcCenterX = centerX + dir * 2f;
-            float arcCenterY = centerY + 18f;
-            float radiusX = 18f;
-            float radiusY = range * 0.78f;
-            float startAngle = -0.68f * dir;
-            float endAngle = 0.68f * dir;
+            // Rotate the side slash 90 degrees so the upward hit reads like the same effect.
+            float arcCenterX = centerX + dir * 30f;
+            float arcCenterY = centerY + 42f;
+            float startX = arcCenterX - 24f;
+            float startY = centerY + 10f;
+            float endX = arcCenterX + 24f;
+            float endY = centerY + range + 60f;
             float previousX = 0f;
             float previousY = 0f;
 
-            for (int i = 0; i <= 10; i++) {
-                float t = i / 10f;
-                float angle = MathUtils.lerp(startAngle, endAngle, t);
-                float px = arcCenterX + MathUtils.sin(angle) * radiusX;
-                float py = arcCenterY + t * radiusY;
+            for (int i = 0; i <= 12; i++) {
+                float t = i / 12f;
+                float px = MathUtils.lerp(startX, endX, t);
+                float py = MathUtils.lerp(startY, endY, t);
                 if (i > 0) {
                     shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
                     shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
                     shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
                     shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
                     shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
-                    shapeRenderer.rectLine(previousX + dir, previousY + 1.5f, px + dir, py + 1.5f, 2.8f);
+                    shapeRenderer.rectLine(previousX + dir * 1.5f, previousY + 1.5f, px + dir * 1.5f, py + 1.5f, 2.8f);
                 }
                 previousX = px;
                 previousY = py;
             }
 
-            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.32f * fade);
+            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.42f * fade);
             shapeRenderer.triangle(
-                    arcCenterX - 20f, arcCenterY + 18f,
-                    arcCenterX + 20f, arcCenterY + 18f,
-                    arcCenterX, arcCenterY + radiusY + 24f);
+                    arcCenterX - 22f, centerY + 20f,
+                    arcCenterX + 22f, centerY + 20f,
+                    arcCenterX, centerY + range + 82f);
             return;
         } else if (attackDirection == AttackDirection.DOWN) {
-            float arcCenterX = centerX + dir * 4f;
-            float arcCenterY = player.getBounds().y + 28f;
-            float radiusX = 20f;
-            float radiusY = range * 0.64f;
-            float startAngle = 0.78f * dir;
-            float endAngle = -0.78f * dir;
+            // Mirror the upward version downward for the aerial slam slash.
+            float arcCenterX = centerX + dir * 30f;
+            float arcCenterY = player.getBounds().y + 4f;
+            float startX = arcCenterX - 24f;
+            float startY = centerY - 2f;
+            float endX = arcCenterX + 24f;
+            float endY = player.getBounds().y - range - 56f;
             float previousX = 0f;
             float previousY = 0f;
 
-            for (int i = 0; i <= 10; i++) {
-                float t = i / 10f;
-                float angle = MathUtils.lerp(startAngle, endAngle, t);
-                float px = arcCenterX + MathUtils.sin(angle) * radiusX;
-                float py = arcCenterY - t * radiusY;
+            for (int i = 0; i <= 12; i++) {
+                float t = i / 12f;
+                float px = MathUtils.lerp(startX, endX, t);
+                float py = MathUtils.lerp(startY, endY, t);
                 if (i > 0) {
                     shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
                     shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
                     shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
                     shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
                     shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
-                    shapeRenderer.rectLine(previousX + dir, previousY - 1.5f, px + dir, py - 1.5f, 2.8f);
+                    shapeRenderer.rectLine(previousX + dir * 1.5f, previousY - 1.5f, px + dir * 1.5f, py - 1.5f, 2.8f);
                 }
                 previousX = px;
                 previousY = py;
             }
 
-            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.32f * fade);
+            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.42f * fade);
             shapeRenderer.triangle(
-                    arcCenterX - 20f, arcCenterY - 16f,
-                    arcCenterX + 20f, arcCenterY - 16f,
-                    arcCenterX, arcCenterY - radiusY - 22f);
+                    arcCenterX - 22f, centerY + 4f,
+                    arcCenterX + 22f, centerY + 4f,
+                    arcCenterX, player.getBounds().y - range - 78f);
             return;
         } else {
             float arcCenterX = centerX + dir * 20f;
@@ -1589,6 +1751,11 @@ public class FirstScreen implements Screen {
         streetTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
 
+    private void loadBossTexture() {
+        bossTexture = new Texture(Gdx.files.internal("boss_fourth_room.png"));
+        bossTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+    }
+
     private void startNewGameInBedroom() {
         locationIndex = 1;
         gameMap = baseMap;
@@ -1609,6 +1776,10 @@ public class FirstScreen implements Screen {
         }
         if (locationIndex == 3 && streetTexture != null) {
             batch.draw(streetTexture, STREET_BACKGROUND_X, STREET_BACKGROUND_Y, STREET_BACKGROUND_WIDTH, STREET_BACKGROUND_HEIGHT);
+            return;
+        }
+        if (locationIndex == 4 && bossTexture != null) {
+            batch.draw(bossTexture, BOSS_BACKGROUND_X, BOSS_BACKGROUND_Y, BOSS_BACKGROUND_WIDTH, BOSS_BACKGROUND_HEIGHT);
         }
     }
 
@@ -1650,6 +1821,24 @@ public class FirstScreen implements Screen {
         drawPillars(0.060f, 0.018f, 0.026f);
         drawRails(0.34f, 0.030f, 0.035f);
         drawGround(0.080f, 0.026f, 0.030f, 0.020f, 0.012f, 0.018f);
+    }
+
+    private void renderBossLaboratory() {
+        shapeRenderer.setColor(0.008f, 0.010f, 0.012f, 1f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(0f, 0f, BOSS_BACKGROUND_X, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(BOSS_BACKGROUND_X + BOSS_BACKGROUND_WIDTH, 0f,
+                Constants.WORLD_WIDTH - (BOSS_BACKGROUND_X + BOSS_BACKGROUND_WIDTH), Constants.WORLD_HEIGHT);
+        shapeRenderer.setColor(0.004f, 0.006f, 0.008f, 0.95f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, 86f);
+        shapeRenderer.rect(0f, 944f, Constants.WORLD_WIDTH, 56f);
+        shapeRenderer.setColor(0.040f, 0.045f, 0.050f, 1f);
+        shapeRenderer.rect(BOSS_LEFT_WALL - 34f, 0f, 34f, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(BOSS_RIGHT_WALL, 0f, Constants.WORLD_WIDTH - BOSS_RIGHT_WALL, Constants.WORLD_HEIGHT);
+
+        float pulse = 0.5f + 0.5f * MathUtils.sin(time * 2.6f);
+        shapeRenderer.setColor(0.16f, 0.38f + pulse * 0.14f, 0.28f + pulse * 0.10f, 0.20f);
+        shapeRenderer.rect(BOSS_ARENA_MIN_X, 170f, BOSS_ARENA_MAX_X - BOSS_ARENA_MIN_X, 12f);
     }
 
     private void renderDungeonDepths() {
@@ -1974,7 +2163,7 @@ public class FirstScreen implements Screen {
             x += player.isFacingRight() ? 18f : -18f;
         }
         float y = b.y - 4f;
-        if (locationIndex >= 1 && locationIndex <= 3) {
+        if (locationIndex >= 1 && locationIndex <= 4) {
             float locationScale = getLocationPlayerScale();
             drawWidth *= locationScale;
             drawHeight *= locationScale;
@@ -2110,6 +2299,12 @@ public class FirstScreen implements Screen {
             if (prompt == null && locationIndex == 3 && !knifeCollected && isNear(player.getBounds(), STREET_KNIFE_PICKUP, KNIFE_PICKUP_PROMPT_RANGE)) {
                 prompt = "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u043e\u0431\u0440\u0430\u0442\u044c \u043d\u043e\u0436";
             }
+            if (prompt == null && locationIndex == 3 && player.getX() > STREET_RIGHT_WALL - 170f) {
+                prompt = "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u043b\u0430\u0431\u043e\u0440\u0430\u0442\u043e\u0440\u0438\u044e";
+            }
+            if (prompt == null && locationIndex == 4 && player.getX() < BOSS_LEFT_WALL + 160f) {
+                prompt = "\u0418\u0434\u0438 \u0432\u043b\u0435\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043d\u0430 \u0443\u043b\u0438\u0446\u0443";
+            }
             if (prompt == null) {
                 Rectangle door = getActiveDoor();
                 float promptRange = locationIndex == 3 ? 96f : 70f;
@@ -2146,13 +2341,34 @@ public class FirstScreen implements Screen {
     }
 
     private void renderHealthBar() {
-        if (locationIndex != 99 || dungeonEnemies.size == 0) {
+        if (locationIndex != 4 || finalBoss == null || !finalBoss.isAlive()) {
             return;
         }
-        float barWidth = 260f;
-        float x = uiCamera.viewportWidth - barWidth - 34f;
-        font.setColor(0.90f, 0.94f, 0.88f, 1f);
-        font.draw(batch, "HP: " + player.getHealth() + " / " + Constants.PLAYER_MAX_HEALTH, x + 78f, 38f);
+        float barWidth = 420f;
+        float x = uiCamera.viewportWidth * 0.5f - barWidth * 0.5f;
+        font.setColor(0.90f, 0.96f, 0.90f, 1f);
+        font.draw(batch, "\u0424\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0431\u043e\u0441\u0441", x + 130f, uiCamera.viewportHeight - 22f);
+        font.draw(batch, finalBoss.getHealth() + " / " + finalBoss.getMaxHealth(), x + 165f, uiCamera.viewportHeight - 64f);
+    }
+
+    private void renderBossHealthBarPanel() {
+        if (locationIndex != 4 || finalBoss == null || !finalBoss.isAlive()) {
+            return;
+        }
+
+        float barWidth = 420f;
+        float x = uiCamera.viewportWidth * 0.5f - barWidth * 0.5f;
+        float y = uiCamera.viewportHeight - 56f;
+        float healthPercent = MathUtils.clamp(finalBoss.getHealth() / (float) finalBoss.getMaxHealth(), 0f, 1f);
+
+        shapeRenderer.setColor(0.010f, 0.012f, 0.014f, 0.92f);
+        shapeRenderer.rect(x - 10f, y - 34f, barWidth + 20f, 28f);
+        shapeRenderer.setColor(0.18f, 0.20f, 0.22f, 1f);
+        shapeRenderer.rect(x, y - 28f, barWidth, 16f);
+        shapeRenderer.setColor(0.74f, 0.10f, 0.10f, 1f);
+        shapeRenderer.rect(x + 2f, y - 26f, (barWidth - 4f) * healthPercent, 12f);
+        shapeRenderer.setColor(0.98f, 0.38f, 0.26f, 1f);
+        shapeRenderer.rect(x + 2f, y - 18f, (barWidth - 4f) * healthPercent, 2f);
     }
 
     private void renderPrologueTitle() {
@@ -2167,8 +2383,9 @@ public class FirstScreen implements Screen {
     }
 
     private void renderUiPanels() {
-        if (!prologueActive && locationIndex == 99 && dungeonEnemies.size > 0) {
+        if (!prologueActive) {
             renderHealthBarPanel();
+            renderBossHealthBarPanel();
         }
 
         if (inventoryVisible) {
@@ -2513,6 +2730,9 @@ public class FirstScreen implements Screen {
         if (streetTexture != null) {
             streetTexture.dispose();
         }
+        if (bossTexture != null) {
+            bossTexture.dispose();
+        }
         if (hallwayTexture != null) {
             hallwayTexture.dispose();
         }
@@ -2522,6 +2742,7 @@ public class FirstScreen implements Screen {
         if (heroTexture != null) {
             heroTexture.dispose();
         }
+        FinalBoss.disposeAssets();
     }
 
     private enum PausePanel {
