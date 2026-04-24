@@ -11,14 +11,21 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
+<<<<<<< HEAD
 import com.badlogic.gdx.utils.viewport.FitViewport;
+=======
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.metrohorror.game.MetroHorrorGame;
 
 public class MainMenuScreen implements Screen {
+<<<<<<< HEAD
     private static final float VIRTUAL_WIDTH = 1280f;
     private static final float VIRTUAL_HEIGHT = 720f;
 
+=======
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     private final MetroHorrorGame game;
     private final Rectangle[] buttonBounds = new Rectangle[4];
     private final String[] buttonLabels = {
@@ -27,6 +34,10 @@ public class MainMenuScreen implements Screen {
             "Достижения",
             "Настройки"
     };
+<<<<<<< HEAD
+=======
+    private final Vector3 pointer = new Vector3();
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -34,8 +45,11 @@ public class MainMenuScreen implements Screen {
     private BitmapFont titleFont;
     private BitmapFont menuFont;
     private GlyphLayout glyphLayout;
+<<<<<<< HEAD
     private final Vector3 pointer = new Vector3();
 
+=======
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     private int hoveredButton = -1;
     private boolean startNewGameRequested;
 
@@ -46,19 +60,35 @@ public class MainMenuScreen implements Screen {
     @Override
     public void show() {
         camera = new OrthographicCamera();
+<<<<<<< HEAD
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
+=======
+        viewport = new ScreenViewport(camera);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
         viewport.apply(true);
 
         batch = new SpriteBatch();
         titleFont = createFont(46);
         menuFont = createFont(24);
         glyphLayout = new GlyphLayout();
+<<<<<<< HEAD
 
         float buttonWidth = 360f;
         float buttonHeight = 48f;
         float buttonGap = 18f;
         float buttonX = VIRTUAL_WIDTH / 2f - buttonWidth / 2f;
         float buttonY = 390f;
+=======
+        updateLayout();
+    }
+
+    private void updateLayout() {
+        float buttonWidth = 360f;
+        float buttonHeight = 48f;
+        float buttonGap = 18f;
+        float buttonX = camera.viewportWidth * 0.5f - buttonWidth * 0.5f;
+        float buttonY = camera.viewportHeight * 0.5f + 30f;
+>>>>>>> f29aecc (Полный экран, масштабируемость)
         for (int i = 0; i < buttonBounds.length; i++) {
             buttonBounds[i] = new Rectangle(buttonX, buttonY - i * (buttonHeight + buttonGap), buttonWidth, buttonHeight);
         }
@@ -112,18 +142,30 @@ public class MainMenuScreen implements Screen {
 
     private void renderText() {
         titleFont.setColor(0.96f, 0.90f, 0.82f, 1f);
+<<<<<<< HEAD
         drawCentered(titleFont, "Paradise Disappear", VIRTUAL_WIDTH / 2f, 560f);
+=======
+        drawCentered(titleFont, "Paradise Disappear", camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f + 200f);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 
         for (int i = 0; i < buttonBounds.length; i++) {
             Rectangle bounds = buttonBounds[i];
             menuFont.setColor(i == hoveredButton ? Color.WHITE : new Color(0.72f, 0.74f, 0.72f, 1f));
+<<<<<<< HEAD
             drawCentered(menuFont, buttonLabels[i], bounds.x + bounds.width / 2f, bounds.y + 34f);
+=======
+            drawCentered(menuFont, buttonLabels[i], bounds.x + bounds.width * 0.5f, bounds.y + 34f);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
         }
     }
 
     private void drawCentered(BitmapFont font, String text, float centerX, float y) {
         glyphLayout.setText(font, text);
+<<<<<<< HEAD
         font.draw(batch, text, centerX - glyphLayout.width / 2f, y);
+=======
+        font.draw(batch, text, centerX - glyphLayout.width * 0.5f, y);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     private BitmapFont createFont(int size) {
@@ -142,6 +184,10 @@ public class MainMenuScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
+<<<<<<< HEAD
+=======
+        updateLayout();
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     @Override public void pause() {}

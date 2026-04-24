@@ -16,7 +16,11 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
+<<<<<<< HEAD
 import com.badlogic.gdx.utils.viewport.FitViewport;
+=======
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.metrohorror.game.MetroHorrorGame;
 
@@ -26,12 +30,19 @@ public class MenuSectionScreen implements Screen {
         ACHIEVEMENTS
     }
 
+<<<<<<< HEAD
     private static final float VIRTUAL_WIDTH = 1280f;
     private static final float VIRTUAL_HEIGHT = 720f;
     private static final Rectangle BACK_BUTTON = new Rectangle(460f, 150f, 360f, 54f);
     private static final Rectangle VOLUME_SLIDER = new Rectangle(560f, 382f, 300f, 12f);
     private static final Rectangle MUSIC_TOGGLE = new Rectangle(820f, 314f, 40f, 40f);
     private static final Rectangle FULLSCREEN_TOGGLE = new Rectangle(820f, 250f, 40f, 40f);
+=======
+    private static final Rectangle BACK_BUTTON = new Rectangle(0f, 0f, 360f, 54f);
+    private static final Rectangle VOLUME_SLIDER = new Rectangle(0f, 0f, 300f, 12f);
+    private static final Rectangle MUSIC_TOGGLE = new Rectangle(0f, 0f, 40f, 40f);
+    private static final Rectangle FULLSCREEN_TOGGLE = new Rectangle(0f, 0f, 40f, 40f);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 
     private final MetroHorrorGame game;
     private final Section section;
@@ -67,7 +78,11 @@ public class MenuSectionScreen implements Screen {
     @Override
     public void show() {
         camera = new OrthographicCamera();
+<<<<<<< HEAD
         viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
+=======
+        viewport = new ScreenViewport(camera);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
         viewport.apply(true);
 
         shapeRenderer = new ShapeRenderer();
@@ -75,9 +90,25 @@ public class MenuSectionScreen implements Screen {
         titleFont = createFont(42);
         textFont = createFont(24);
         glyphLayout = new GlyphLayout();
+<<<<<<< HEAD
         loadSettings();
     }
 
+=======
+        updateLayout();
+        loadSettings();
+    }
+
+    private void updateLayout() {
+        float centerX = camera.viewportWidth * 0.5f;
+        float centerY = camera.viewportHeight * 0.5f;
+        BACK_BUTTON.setPosition(centerX - BACK_BUTTON.width * 0.5f, centerY - 210f);
+        VOLUME_SLIDER.setPosition(centerX - 80f, centerY + 22f);
+        MUSIC_TOGGLE.setPosition(centerX + 180f, centerY - 46f);
+        FULLSCREEN_TOGGLE.setPosition(centerX + 180f, centerY - 110f);
+    }
+
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     @Override
     public void render(float delta) {
         updateInput();
@@ -146,12 +177,24 @@ public class MenuSectionScreen implements Screen {
     }
 
     private void renderPanels() {
+<<<<<<< HEAD
         shapeRenderer.setColor(0.030f, 0.035f, 0.038f, 0.92f);
         shapeRenderer.rect(300f, 190f, 680f, 330f);
         shapeRenderer.setColor(0.48f, 0.68f, 0.62f, 0.86f);
         shapeRenderer.rect(300f, 512f, 680f, 6f);
         shapeRenderer.setColor(0.58f, 0.14f, 0.13f, 0.80f);
         shapeRenderer.rect(300f, 190f, 680f, 4f);
+=======
+        float panelX = camera.viewportWidth * 0.5f - 340f;
+        float panelY = camera.viewportHeight * 0.5f - 170f;
+
+        shapeRenderer.setColor(0.030f, 0.035f, 0.038f, 0.92f);
+        shapeRenderer.rect(panelX, panelY, 680f, 330f);
+        shapeRenderer.setColor(0.48f, 0.68f, 0.62f, 0.86f);
+        shapeRenderer.rect(panelX, panelY + 322f, 680f, 6f);
+        shapeRenderer.setColor(0.58f, 0.14f, 0.13f, 0.80f);
+        shapeRenderer.rect(panelX, panelY, 680f, 4f);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 
         if (isSettingsScreen()) {
             renderSettingsControls();
@@ -205,13 +248,22 @@ public class MenuSectionScreen implements Screen {
     }
 
     private void renderText() {
+<<<<<<< HEAD
         titleFont.setColor(0.96f, 0.90f, 0.82f, 1f);
         drawCentered(titleFont, getTitle(), VIRTUAL_WIDTH / 2f, 462f);
+=======
+        float centerX = camera.viewportWidth * 0.5f;
+        float centerY = camera.viewportHeight * 0.5f;
+
+        titleFont.setColor(0.96f, 0.90f, 0.82f, 1f);
+        drawCentered(titleFont, getTitle(), centerX, centerY + 102f);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
 
         if (isSettingsScreen()) {
             renderSettingsText();
         } else {
             textFont.setColor(0.70f, 0.78f, 0.74f, 1f);
+<<<<<<< HEAD
             drawCentered(textFont, "Здесь позже появится список достижений.", VIRTUAL_WIDTH / 2f, 360f);
             drawCentered(textFont, "Нажмите Escape или кнопку ниже, чтобы вернуться.", VIRTUAL_WIDTH / 2f, 316f);
         }
@@ -231,6 +283,30 @@ public class MenuSectionScreen implements Screen {
 
         textFont.setColor(0.70f, 0.78f, 0.74f, 1f);
         drawCentered(textFont, "Нажмите Escape или кнопку ниже, чтобы вернуться.", VIRTUAL_WIDTH / 2f, 228f);
+=======
+            drawCentered(textFont, "Здесь позже появится список достижений.", centerX, centerY);
+            drawCentered(textFont, "Нажмите Escape или кнопку ниже, чтобы вернуться.", centerX, centerY - 44f);
+        }
+
+        textFont.setColor(hoveredBackButton ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
+        drawCentered(textFont, "Назад", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
+    }
+
+    private void renderSettingsText() {
+        float centerX = camera.viewportWidth * 0.5f;
+        float centerY = camera.viewportHeight * 0.5f;
+
+        textFont.setColor(0.86f, 0.90f, 0.86f, 1f);
+        textFont.draw(batch, "Громкость", centerX - 220f, centerY + 44f);
+        textFont.draw(batch, Math.round(volume * 100f) + "%", centerX + 250f, centerY + 44f);
+        textFont.draw(batch, "Музыка", centerX - 220f, centerY - 16f);
+        textFont.draw(batch, musicEnabled ? "Включена" : "Выключена", centerX - 80f, centerY - 16f);
+        textFont.draw(batch, "Полный экран", centerX - 220f, centerY - 80f);
+        textFont.draw(batch, fullscreenEnabled ? "Включен" : "Выключен", centerX - 20f, centerY - 80f);
+
+        textFont.setColor(0.70f, 0.78f, 0.74f, 1f);
+        drawCentered(textFont, "Нажмите Escape или кнопку ниже, чтобы вернуться.", centerX, centerY - 132f);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     private String getTitle() {
@@ -293,7 +369,11 @@ public class MenuSectionScreen implements Screen {
 
     private void drawCentered(BitmapFont font, String text, float centerX, float y) {
         glyphLayout.setText(font, text);
+<<<<<<< HEAD
         font.draw(batch, text, centerX - glyphLayout.width / 2f, y);
+=======
+        font.draw(batch, text, centerX - glyphLayout.width * 0.5f, y);
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     private BitmapFont createFont(int size) {
@@ -312,6 +392,10 @@ public class MenuSectionScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
+<<<<<<< HEAD
+=======
+        updateLayout();
+>>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     @Override public void pause() {}
