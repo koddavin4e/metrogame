@@ -38,16 +38,38 @@ public class FirstScreen implements Screen {
     private static final float VIRTUAL_WIDTH = 1280f;
     private static final float VIRTUAL_HEIGHT = 720f;
     private static final Rectangle SCHOLAR_BOUNDS = new Rectangle(610f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 42f, 72f);
-    private static final Rectangle CHAPEL_BEDROOM_DOOR = new Rectangle(82f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 78f, 140f);
-    private static final Rectangle CHAPEL_DOOR = new Rectangle(2380f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 78f, 140f);
-    private static final Rectangle ENGINE_RETURN_DOOR = new Rectangle(140f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 78f, 140f);
-    private static final Rectangle ENGINE_DUNGEON_DOOR = new Rectangle(2650f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 78f, 140f);
-    private static final Rectangle DUNGEON_RETURN_DOOR = new Rectangle(140f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 78f, 140f);
-    private static final Rectangle TRASH_PILE = new Rectangle(2460f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 112f, 58f);
-    private static final Rectangle BEDROOM_BED = new Rectangle(135f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 230f, 58f);
-    private static final Rectangle BEDROOM_DOOR = new Rectangle(1088f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 78f, 140f);
+    private static final Rectangle CHAPEL_BEDROOM_DOOR = new Rectangle(1096f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 96f, 156f);
+    private static final Rectangle CHAPEL_DOOR = new Rectangle(302f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 132f, 176f);
+    private static final Rectangle STREET_RETURN_DOOR = new Rectangle(314f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 94f, 170f);
+    private static final Rectangle STREET_KNIFE_PICKUP = new Rectangle(2296f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 108f, 62f);
+    private static final Rectangle BEDROOM_BED = new Rectangle(208f, Constants.GROUND_Y + Constants.GROUND_HEIGHT + 8f, 205f, 68f);
+    private static final Rectangle BEDROOM_TV = new Rectangle(846f, Constants.GROUND_Y + Constants.GROUND_HEIGHT + 34f, 144f, 130f);
+    private static final Rectangle BEDROOM_DOOR = new Rectangle(1046f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 88f, 154f);
+    private static final float BEDROOM_LEFT_WALL = 96f;
     private static final float BEDROOM_RIGHT_WALL = 1240f;
-    private static final float BEDROOM_PLAYER_X = 235f;
+    private static final float BEDROOM_COLLISION_RIGHT_WALL = BEDROOM_DOOR.x + BEDROOM_DOOR.width + 8f;
+    private static final float BEDROOM_PLAYER_X = 300f;
+    private static final float BEDROOM_BACKGROUND_Y = -74f;
+    private static final float BEDROOM_BACKGROUND_HEIGHT = 826.6667f;
+    private static final float BEDROOM_PLAYER_SCALE = 1.5f;
+    private static final float HALLWAY_PLAYER_SCALE = 1.5f;
+    private static final float STREET_PLAYER_SCALE = 1.5f;
+    private static final float TV_REQUIRED_WATCH_TIME = 2.5f;
+    private static final float HALLWAY_BACKGROUND_X = 260f;
+    private static final float HALLWAY_BACKGROUND_Y = 0f;
+    private static final float HALLWAY_BACKGROUND_WIDTH = 1500f;
+    private static final float HALLWAY_BACKGROUND_HEIGHT = 1000f;
+    private static final float HALLWAY_LEFT_WALL = 318f;
+    private static final float HALLWAY_RIGHT_WALL = 1708f;
+    private static final float HALLWAY_PLAYER_EXIT_X = CHAPEL_BEDROOM_DOOR.x + 6f;
+    private static final float STREET_BACKGROUND_X = 240f;
+    private static final float STREET_BACKGROUND_Y = 0f;
+    private static final float STREET_BACKGROUND_WIDTH = 2520f;
+    private static final float STREET_BACKGROUND_HEIGHT = 1000f;
+    private static final float STREET_LEFT_WALL = 286f;
+    private static final float STREET_RIGHT_WALL = 2680f;
+    private static final float STREET_PLAYER_EXIT_X = STREET_RETURN_DOOR.x + 18f;
+    private static final float KNIFE_PICKUP_PROMPT_RANGE = 84f;
     private static final float TYPE_SPEED = 42f;
     private static final int KNIFE_DAMAGE = 2;
     private static final int KILL_HEAL_AMOUNT = 5;
@@ -67,6 +89,7 @@ public class FirstScreen implements Screen {
     private static final float HERO_BODY_DRAW_WIDTH = 88f;
     private static final float HERO_ATTACK_DRAW_WIDTH = HERO_BODY_DRAW_WIDTH;
     private static final float HERO_DRAW_HEIGHT = 96f;
+    private static final float BEDROOM_PROMPT_Y = 104f;
     private static final int SAVE_SLOT_COUNT = 3;
     private static final String SAVE_PREFERENCES = "metrohorror-saves";
     private static final String[] PAUSE_BUTTON_LABELS = {
@@ -85,6 +108,9 @@ public class FirstScreen implements Screen {
     private BitmapFont font;
     private GlyphLayout glyphLayout;
     private Texture heroTexture;
+    private Texture bedroomTexture;
+    private Texture hallwayTexture;
+    private Texture streetTexture;
     private TextureRegion[] heroFrames;
     private final MetroHorrorGame game;
     private final int loadSlot;
@@ -104,8 +130,8 @@ public class FirstScreen implements Screen {
     private InventoryDragSource inventoryDragSource = InventoryDragSource.NONE;
     private int inventoryDragSlot = -1;
     private WeaponType draggedWeapon;
-    private boolean dialogueVisible = true;
-    private boolean prologueActive = true;
+    private boolean dialogueVisible;
+    private boolean prologueActive;
     private int dialogueLine;
     private int locationIndex;
     private float time;
@@ -117,13 +143,15 @@ public class FirstScreen implements Screen {
     private boolean chapelIntroSeen;
     private boolean engineIntroSeen;
     private boolean doorLockedUntilPlayerMoves;
-    private boolean lyingInBed;
+    private boolean watchedBedroomTv;
+    private boolean tvScreenVisible;
     private boolean pauseMenuVisible;
     private int hoveredPauseButton = -1;
     private PausePanel pausePanel = PausePanel.NONE;
+    private float tvWatchTimer;
 
-    private String[] currentSpeakers = DialogueScripts.PROLOGUE_SPEAKERS;
-    private String[] currentText = DialogueScripts.PROLOGUE_TEXT;
+    private String[] currentSpeakers = DialogueScripts.CHAPEL_SPEAKERS;
+    private String[] currentText = DialogueScripts.CHAPEL_TEXT;
 
     public FirstScreen() {
         this(null, -1);
@@ -161,12 +189,14 @@ public class FirstScreen implements Screen {
         font = createGameFont();
         glyphLayout = new GlyphLayout();
         loadHeroSpriteSheet();
+        loadBedroomTexture();
+        loadHallwayTexture();
+        loadStreetTexture();
         setupPauseMenuBounds();
 
         player = new Player(140, 240);
         player.healToFull();
         dungeonEnemies = new Array<>();
-        spawnDungeonEnemies();
         baseMap = new GameMap();
         dungeonMap = new DungeonMap();
         gameMap = baseMap;
@@ -175,6 +205,8 @@ public class FirstScreen implements Screen {
         inventoryUI = new InventoryUI();
         if (isValidSaveSlot(loadSlot) && hasSave(loadSlot)) {
             loadFromSlot(loadSlot);
+        } else {
+            startNewGameInBedroom();
         }
     }
 
@@ -197,6 +229,7 @@ public class FirstScreen implements Screen {
 
             batch.setProjectionMatrix(camera.combined);
             batch.begin();
+            renderWorldTextures();
             renderPlayerSprite();
             batch.end();
         }
@@ -225,6 +258,7 @@ public class FirstScreen implements Screen {
             renderPrologueTitle();
         }
         renderDialogue();
+        renderTvOverlayText();
         renderPauseMenuText();
         batch.end();
     }
@@ -248,19 +282,20 @@ public class FirstScreen implements Screen {
             return;
         }
 
+        if (tvScreenVisible) {
+            tvWatchTimer = Math.min(TV_REQUIRED_WATCH_TIME, tvWatchTimer + delta);
+            uiCamera.update();
+            return;
+        }
+
         player.applyGravity(delta);
         player.update(delta);
         resolveWorldCollisions();
         updateDoorLock();
         checkTrashPileDiscovery();
-        if (locationIndex == 2) {
-            updateDungeonEnemies(delta);
-            updateKnifeAttack();
-            if (!player.isAlive()) {
-                respawnAtCurrentDoor();
-            }
-        }
+        updateKnifeAttack();
         cameraSystem.follow(camera, player, delta);
+        clampCameraToCurrentLocation();
         uiCamera.update();
     }
 
@@ -287,7 +322,7 @@ public class FirstScreen implements Screen {
             updateInventoryInput();
         }
 
-        if (!dialogueVisible && !inventoryVisible && !prologueActive && !lyingInBed) {
+        if (!dialogueVisible && !inventoryVisible && !prologueActive && !tvScreenVisible) {
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 player.moveLeft();
             }
@@ -302,7 +337,7 @@ public class FirstScreen implements Screen {
             }
         }
 
-        if (!prologueActive && Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
+        if (!prologueActive && !tvScreenVisible && Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
             inventoryVisible = !inventoryVisible;
             cancelInventoryDrag();
         }
@@ -544,7 +579,7 @@ public class FirstScreen implements Screen {
         preferences.putFloat(prefix + "playerY", player.getY());
         preferences.putInteger(prefix + "health", player.getHealth());
         preferences.putBoolean(prefix + "knifeCollected", knifeCollected);
-        preferences.putBoolean(prefix + "lyingInBed", lyingInBed);
+        preferences.putBoolean(prefix + "watchedBedroomTv", watchedBedroomTv);
         preferences.putBoolean(prefix + "chapelIntroSeen", chapelIntroSeen);
         preferences.putBoolean(prefix + "engineIntroSeen", engineIntroSeen);
         preferences.putBoolean(prefix + "prologueActive", prologueActive);
@@ -558,8 +593,8 @@ public class FirstScreen implements Screen {
         Preferences preferences = Gdx.app.getPreferences(SAVE_PREFERENCES);
         String prefix = getSavePrefix(slot);
 
-        locationIndex = preferences.getInteger(prefix + "locationIndex", 0);
-        gameMap = locationIndex == 2 ? dungeonMap : baseMap;
+        locationIndex = preferences.getInteger(prefix + "locationIndex", 1);
+        gameMap = baseMap;
         player.setX(preferences.getFloat(prefix + "playerX", 140f));
         player.setY(preferences.getFloat(prefix + "playerY", Constants.GROUND_Y + Constants.GROUND_HEIGHT));
         player.setVelocityY(0f);
@@ -568,14 +603,15 @@ public class FirstScreen implements Screen {
         player.takeDamage(Constants.PLAYER_MAX_HEALTH - savedHealth);
 
         knifeCollected = preferences.getBoolean(prefix + "knifeCollected", false);
-        lyingInBed = preferences.getBoolean(prefix + "lyingInBed", false);
+        watchedBedroomTv = preferences.getBoolean(prefix + "watchedBedroomTv", false);
+        tvScreenVisible = false;
+        tvWatchTimer = watchedBedroomTv ? TV_REQUIRED_WATCH_TIME : 0f;
         chapelIntroSeen = preferences.getBoolean(prefix + "chapelIntroSeen", false);
         engineIntroSeen = preferences.getBoolean(prefix + "engineIntroSeen", false);
         if (knifeCollected) {
             inventorySystem.equipWeapon(0, WeaponType.BASIC_KNIFE);
             inventorySystem.selectWeaponSlot(0);
         }
-
         prologueActive = preferences.getBoolean(prefix + "prologueActive", false);
         dialogueVisible = preferences.getBoolean(prefix + "dialogueVisible", false);
         dialogueLine = preferences.getInteger(prefix + "dialogueLine", 0);
@@ -591,6 +627,7 @@ public class FirstScreen implements Screen {
         knifeDamageApplied = false;
         camera.position.x = player.getX();
         camera.update();
+        clampCameraToCurrentLocation();
     }
 
     public static boolean hasSave(int slot) {
@@ -629,12 +666,6 @@ public class FirstScreen implements Screen {
         if (currentText == DialogueScripts.PROLOGUE_TEXT) {
             return "prologue";
         }
-        if (currentText == DialogueScripts.ENGINE_TEXT) {
-            return "engine";
-        }
-        if (currentText == DialogueScripts.TRASH_TEXT) {
-            return "trash";
-        }
         return "chapel";
     }
 
@@ -642,12 +673,6 @@ public class FirstScreen implements Screen {
         if ("prologue".equals(dialogueKey)) {
             currentSpeakers = DialogueScripts.PROLOGUE_SPEAKERS;
             currentText = DialogueScripts.PROLOGUE_TEXT;
-        } else if ("engine".equals(dialogueKey)) {
-            currentSpeakers = DialogueScripts.ENGINE_SPEAKERS;
-            currentText = DialogueScripts.ENGINE_TEXT;
-        } else if ("trash".equals(dialogueKey)) {
-            currentSpeakers = DialogueScripts.TRASH_SPEAKERS;
-            currentText = DialogueScripts.TRASH_TEXT;
         } else {
             currentSpeakers = DialogueScripts.CHAPEL_SPEAKERS;
             currentText = DialogueScripts.CHAPEL_TEXT;
@@ -655,6 +680,14 @@ public class FirstScreen implements Screen {
     }
 
     private void handleAction() {
+        if (tvScreenVisible) {
+            if (tvWatchTimer >= TV_REQUIRED_WATCH_TIME) {
+                watchedBedroomTv = true;
+                tvScreenVisible = false;
+            }
+            return;
+        }
+
         if (dialogueVisible) {
             if (getVisibleDialogueCharacters() < currentText[dialogueLine].length()) {
                 dialogueTypeTimer = currentText[dialogueLine].length() / TYPE_SPEED;
@@ -664,9 +697,6 @@ public class FirstScreen implements Screen {
             dialogueLine++;
             dialogueTypeTimer = 0f;
             if (dialogueLine >= currentText.length) {
-                if (currentText == DialogueScripts.TRASH_TEXT && !knifeCollected) {
-                    collectKnife();
-                }
                 dialogueVisible = false;
                 dialogueLine = 0;
                 dialogueTypeTimer = 0f;
@@ -678,42 +708,39 @@ public class FirstScreen implements Screen {
             return;
         }
 
-        if (locationIndex == -1) {
-            if (isNear(player.getBounds(), BEDROOM_BED, 80f)) {
-                lyingInBed = !lyingInBed;
-                player.setX(BEDROOM_PLAYER_X);
-                player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
-                player.setVelocityY(0f);
+        if (locationIndex == 1) {
+            if (isNear(player.getBounds(), BEDROOM_DOOR, 70f)) {
+                tryChangeLocation();
                 return;
             }
-            if (!lyingInBed && isNear(player.getBounds(), BEDROOM_DOOR, 70f)) {
-                tryChangeLocation();
+            if (isNear(player.getBounds(), BEDROOM_TV, 52f)) {
+                tvScreenVisible = true;
+                tvWatchTimer = watchedBedroomTv ? TV_REQUIRED_WATCH_TIME : 0f;
+                inventoryVisible = false;
             }
             return;
         }
 
-        if (locationIndex == 0 && isNear(player.getBounds(), SCHOLAR_BOUNDS, 80f)) {
-            startDialogue(DialogueScripts.CHAPEL_SPEAKERS, DialogueScripts.CHAPEL_TEXT);
-            return;
-        }
-
-        if (locationIndex == 0 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
+        if (locationIndex == 2 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
             tryChangeLocation();
             return;
         }
 
-        if (locationIndex == 1 && !knifeCollected && isNear(player.getBounds(), ENGINE_DUNGEON_DOOR, 120f)) {
-            startDialogue(DialogueScripts.TRASH_SPEAKERS, DialogueScripts.TRASH_TEXT);
+        if (locationIndex == 3 && !knifeCollected && isNear(player.getBounds(), STREET_KNIFE_PICKUP, KNIFE_PICKUP_PROMPT_RANGE)) {
+            collectKnife();
             return;
         }
 
         Rectangle door = getActiveDoor();
-        if (isNear(player.getBounds(), door, 70f)) {
+        if (locationIndex == 3 ? isNear(player.getBounds(), door, 96f) : isNear(player.getBounds(), door, 70f)) {
             tryChangeLocation();
         }
     }
 
     private void tryChangeLocation() {
+        if (locationIndex == 1 && !watchedBedroomTv) {
+            return;
+        }
         if (doorLockedUntilPlayerMoves) {
             return;
         }
@@ -729,9 +756,10 @@ public class FirstScreen implements Screen {
     }
 
     private void enterBedroomAfterPrologue() {
-        locationIndex = -1;
+        locationIndex = 1;
         gameMap = baseMap;
-        lyingInBed = true;
+        tvScreenVisible = false;
+        tvWatchTimer = watchedBedroomTv ? TV_REQUIRED_WATCH_TIME : 0f;
         dialogueVisible = false;
         dialogueLine = 0;
         dialogueTypeTimer = 0f;
@@ -742,34 +770,25 @@ public class FirstScreen implements Screen {
         doorLockedUntilPlayerMoves = true;
         camera.position.x = player.getX();
         camera.update();
+        clampCameraToCurrentLocation();
     }
 
     private void changeLocation() {
-        boolean startChapelDialogue = locationIndex == -1;
-        if (locationIndex == -1) {
-            locationIndex = 0;
-            lyingInBed = false;
-            player.setX(140f);
-        } else if (locationIndex == 0 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
-            locationIndex = -1;
-            lyingInBed = false;
-            player.setX(BEDROOM_DOOR.x - 110f);
-        } else if (locationIndex == 0) {
-            locationIndex = 1;
-            player.setX(ENGINE_RETURN_DOOR.x + 120f);
-        } else if (locationIndex == 1 && isNear(player.getBounds(), ENGINE_DUNGEON_DOOR, 70f)) {
+        if (locationIndex == 1) {
             locationIndex = 2;
-            player.healToFull();
-            player.setX(DUNGEON_RETURN_DOOR.x + 120f);
-        } else if (locationIndex == 1) {
-            locationIndex = 0;
-            player.setX(CHAPEL_DOOR.x - 110f);
-        } else {
+            player.setX(HALLWAY_PLAYER_EXIT_X);
+        } else if (locationIndex == 2 && isNear(player.getBounds(), CHAPEL_BEDROOM_DOOR, 70f)) {
             locationIndex = 1;
-            player.setX(ENGINE_DUNGEON_DOOR.x - 110f);
+            player.setX(BEDROOM_DOOR.x - 110f);
+        } else if (locationIndex == 2) {
+            locationIndex = 3;
+            player.setX(STREET_PLAYER_EXIT_X);
+        } else {
+            locationIndex = 2;
+            player.setX(CHAPEL_DOOR.x - 110f);
         }
 
-        gameMap = locationIndex == 2 ? dungeonMap : baseMap;
+        gameMap = baseMap;
         dialogueVisible = false;
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
@@ -778,29 +797,65 @@ public class FirstScreen implements Screen {
         player.setVelocityY(0f);
         camera.position.x = player.getX();
         camera.update();
+        clampCameraToCurrentLocation();
 
-        if (startChapelDialogue && !chapelIntroSeen) {
-            chapelIntroSeen = true;
-            startDialogue(DialogueScripts.CHAPEL_SPEAKERS, DialogueScripts.CHAPEL_TEXT);
-        } else if (locationIndex == 1) {
-            if (!engineIntroSeen) {
-                engineIntroSeen = true;
-                startDialogue(DialogueScripts.ENGINE_SPEAKERS, DialogueScripts.ENGINE_TEXT);
-            }
-        }
     }
 
     private Rectangle getActiveDoor() {
-        if (locationIndex == -1) {
+        if (locationIndex == 1) {
             return BEDROOM_DOOR;
         }
-        if (locationIndex == 0) {
-            return player.getX() < Constants.WORLD_WIDTH * 0.5f ? CHAPEL_BEDROOM_DOOR : CHAPEL_DOOR;
+        if (locationIndex == 2) {
+            return getNearestDoor(CHAPEL_BEDROOM_DOOR, CHAPEL_DOOR);
         }
+        return STREET_RETURN_DOOR;
+    }
+
+    private Rectangle getNearestDoor(Rectangle firstDoor, Rectangle secondDoor) {
+        float playerCenter = player.getBounds().x + player.getBounds().width * 0.5f;
+        float firstCenter = firstDoor.x + firstDoor.width * 0.5f;
+        float secondCenter = secondDoor.x + secondDoor.width * 0.5f;
+        return Math.abs(playerCenter - firstCenter) <= Math.abs(playerCenter - secondCenter) ? firstDoor : secondDoor;
+    }
+
+    private float getLocationPlayerScale() {
         if (locationIndex == 1) {
-            return player.getX() > Constants.WORLD_WIDTH * 0.5f ? ENGINE_DUNGEON_DOOR : ENGINE_RETURN_DOOR;
+            return BEDROOM_PLAYER_SCALE;
         }
-        return DUNGEON_RETURN_DOOR;
+        if (locationIndex == 2) {
+            return HALLWAY_PLAYER_SCALE;
+        }
+        if (locationIndex == 3) {
+            return STREET_PLAYER_SCALE;
+        }
+        return 1f;
+    }
+
+    private float getPlayerVisualMarginX() {
+        float drawWidth = Math.max(HERO_BODY_DRAW_WIDTH, HERO_ATTACK_DRAW_WIDTH) * getLocationPlayerScale();
+        return Math.max(0f, drawWidth * 0.5f - Constants.PLAYER_WIDTH * 0.5f);
+    }
+
+    private void clampCameraToCurrentLocation() {
+        float halfWidth = camera.viewportWidth * 0.5f;
+        float halfHeight = camera.viewportHeight * 0.5f;
+
+        if (locationIndex == 1) {
+            camera.position.x = BEDROOM_RIGHT_WALL * 0.5f;
+        } else if (locationIndex == 2) {
+            float minX = HALLWAY_LEFT_WALL + halfWidth;
+            float maxX = HALLWAY_RIGHT_WALL - halfWidth;
+            camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
+        } else if (locationIndex == 3) {
+            float minX = STREET_LEFT_WALL + halfWidth;
+            float maxX = STREET_RIGHT_WALL - halfWidth;
+            camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
+        } else {
+            camera.position.x = MathUtils.clamp(camera.position.x, halfWidth, Constants.WORLD_WIDTH - halfWidth);
+        }
+
+        camera.position.y = MathUtils.clamp(camera.position.y, halfHeight, Constants.WORLD_HEIGHT - halfHeight);
+        camera.update();
     }
 
     private void resolveWorldCollisions() {
@@ -838,9 +893,30 @@ public class FirstScreen implements Screen {
         }
 
         player.setOnGround(landed);
+        float visualMarginX = getPlayerVisualMarginX();
+        if (locationIndex == 1 && player.getX() < BEDROOM_LEFT_WALL + visualMarginX) {
+            player.setX(BEDROOM_LEFT_WALL + visualMarginX);
+            return;
+        }
+        if (locationIndex == 2 && player.getX() < HALLWAY_LEFT_WALL + visualMarginX) {
+            player.setX(HALLWAY_LEFT_WALL + visualMarginX);
+            return;
+        }
+        if (locationIndex == 3 && player.getX() < STREET_LEFT_WALL + visualMarginX) {
+            player.setX(STREET_LEFT_WALL + visualMarginX);
+            return;
+        }
         if (player.getX() < 0) player.setX(0);
-        if (locationIndex == -1 && player.getX() > BEDROOM_RIGHT_WALL - Constants.PLAYER_WIDTH) {
-            player.setX(BEDROOM_RIGHT_WALL - Constants.PLAYER_WIDTH);
+        if (locationIndex == 1 && player.getX() > BEDROOM_COLLISION_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
+            player.setX(BEDROOM_COLLISION_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
+            return;
+        }
+        if (locationIndex == 2 && player.getX() > HALLWAY_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
+            player.setX(HALLWAY_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
+            return;
+        }
+        if (locationIndex == 3 && player.getX() > STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
+            player.setX(STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
             return;
         }
         if (player.getX() > Constants.WORLD_WIDTH - Constants.PLAYER_WIDTH) {
@@ -849,46 +925,26 @@ public class FirstScreen implements Screen {
     }
 
     private void renderWorld() {
-        if (locationIndex == -1) {
+        if (locationIndex == 1) {
             renderBedroom();
-            renderDoor(BEDROOM_DOOR, 0.18f, 0.24f, 0.26f);
-        } else if (locationIndex == 0) {
+        } else if (locationIndex == 2) {
             renderRuinedChapelStation();
-            renderScholar();
-            renderDoor(CHAPEL_BEDROOM_DOOR, 0.20f, 0.18f, 0.16f);
-            renderDoor(CHAPEL_DOOR, 0.12f, 0.38f, 0.45f);
-        } else if (locationIndex == 1) {
-            renderAngelEngineLine();
-            if (!knifeCollected) {
-                renderTrashPile();
-            }
-            renderDoor(ENGINE_RETURN_DOOR, 0.36f, 0.18f, 0.12f);
-            renderDoor(ENGINE_DUNGEON_DOOR, 0.14f, 0.42f, 0.28f);
         } else {
-            renderDungeonDepths();
-            renderDoor(DUNGEON_RETURN_DOOR, 0.34f, 0.19f, 0.12f);
-            renderDungeonEnemies();
+            renderStreetExterior();
+            renderStreetKnifePickup();
         }
         renderKnifeSlash();
 
     }
 
     private void checkTrashPileDiscovery() {
-        if (knifeCollected || locationIndex != 1 || dialogueVisible || inventoryVisible) {
-            return;
-        }
-        if (isNear(player.getBounds(), TRASH_PILE, 42f)) {
-            startDialogue(DialogueScripts.TRASH_SPEAKERS, DialogueScripts.TRASH_TEXT);
-        }
+        // Knife pickup now lives on the street near the bus stop.
     }
 
     private void collectKnife() {
         knifeCollected = true;
         inventorySystem.equipWeapon(0, WeaponType.BASIC_KNIFE);
         inventorySystem.selectWeaponSlot(0);
-        inventorySystem.addItem("\u041e\u0441\u043a\u043e\u043b\u043a\u0438 \u0441\u0442\u0435\u043a\u043b\u0430", 3);
-        inventorySystem.addItem("\u0422\u043a\u0430\u043d\u0435\u0432\u0430\u044f \u043f\u043e\u0432\u044f\u0437\u043a\u0430", 1);
-        inventorySystem.addWeaponToBag(WeaponType.RUSTY_SWORD);
     }
 
     private void startKnifeAttack() {
@@ -1017,7 +1073,7 @@ public class FirstScreen implements Screen {
             }
 
             applyEnemySeparation(enemy, delta);
-            enemy.clampX(DUNGEON_RETURN_DOOR.x + 115f, Constants.WORLD_WIDTH - 120f);
+            enemy.clampX(STREET_RETURN_DOOR.x + 115f, Constants.WORLD_WIDTH - 120f);
 
             if (closeEnoughOnY && absDx <= enemy.getAttackRange() + 14f && enemy.canAttack() && player.isAlive()) {
                 enemy.triggerAttack();
@@ -1070,7 +1126,7 @@ public class FirstScreen implements Screen {
 
     private void respawnAtCurrentDoor() {
         player.healToFull();
-        player.setX(DUNGEON_RETURN_DOOR.x + RESPAWN_X_OFFSET);
+        player.setX(STREET_RETURN_DOOR.x + RESPAWN_X_OFFSET);
         player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
         player.setVelocityY(0f);
         knifeSwingTimer = 0f;
@@ -1080,18 +1136,24 @@ public class FirstScreen implements Screen {
         camera.update();
     }
 
-    private void renderTrashPile() {
-        shapeRenderer.setColor(0.08f, 0.07f, 0.06f, 1f);
-        shapeRenderer.rect(TRASH_PILE.x, TRASH_PILE.y, TRASH_PILE.width, 22f);
-        shapeRenderer.setColor(0.14f, 0.12f, 0.10f, 1f);
-        shapeRenderer.rect(TRASH_PILE.x + 14f, TRASH_PILE.y + 20f, 76f, 24f);
-        shapeRenderer.setColor(0.23f, 0.20f, 0.16f, 1f);
-        shapeRenderer.rect(TRASH_PILE.x + 34f, TRASH_PILE.y + 42f, 44f, 16f);
-        shapeRenderer.setColor(0.72f, 0.85f, 0.88f, 0.82f);
-        shapeRenderer.rect(TRASH_PILE.x + 82f, TRASH_PILE.y + 24f, 30f, 5f);
-        shapeRenderer.rect(TRASH_PILE.x + 8f, TRASH_PILE.y + 38f, 24f, 5f);
-        shapeRenderer.setColor(0.82f, 0.84f, 0.78f, 1f);
-        shapeRenderer.rect(TRASH_PILE.x + 58f, TRASH_PILE.y + 34f, 34f, 6f);
+    private void renderStreetKnifePickup() {
+        if (knifeCollected) {
+            return;
+        }
+
+        float pulse = 0.5f + 0.5f * MathUtils.sin(time * 4.6f);
+        float x = STREET_KNIFE_PICKUP.x + 26f;
+        float y = STREET_KNIFE_PICKUP.y + 8f;
+        shapeRenderer.setColor(0.010f, 0.012f, 0.014f, 0.82f);
+        shapeRenderer.ellipse(x - 12f, y - 4f, 62f, 16f);
+        shapeRenderer.setColor(0.10f, 0.12f, 0.14f, 1f);
+        shapeRenderer.rectLine(x, y + 10f, x + 34f, y + 28f, 6f);
+        shapeRenderer.setColor(0.72f, 0.80f, 0.90f, 1f);
+        shapeRenderer.rectLine(x + 14f, y + 8f, x + 50f, y + 40f, 4f);
+        shapeRenderer.setColor(0.90f, 0.96f, 1f, 0.72f + pulse * 0.18f);
+        shapeRenderer.rectLine(x + 24f, y + 19f, x + 48f, y + 37f, 1.8f);
+        shapeRenderer.setColor(0.18f, 0.82f, 0.96f, 0.18f + pulse * 0.14f);
+        shapeRenderer.circle(x + 48f, y + 38f, 8f + pulse * 4f, 20);
     }
 
     private void renderDungeonEnemies() {
@@ -1173,17 +1235,72 @@ public class FirstScreen implements Screen {
         float forwardRange = range + KNIFE_FORWARD_RANGE_BONUS;
         float fade = MathUtils.sin(progress * MathUtils.PI);
 
-        float startX = centerX + dir * 10f;
-        float startY = centerY;
-        float endX;
-        float endY;
         if (attackDirection == AttackDirection.UP) {
-            endX = centerX + MathUtils.sin(progress * MathUtils.PI) * 16f * dir;
-            endY = centerY + range;
+            float arcCenterX = centerX + dir * 2f;
+            float arcCenterY = centerY + 18f;
+            float radiusX = 18f;
+            float radiusY = range * 0.78f;
+            float startAngle = -0.68f * dir;
+            float endAngle = 0.68f * dir;
+            float previousX = 0f;
+            float previousY = 0f;
+
+            for (int i = 0; i <= 10; i++) {
+                float t = i / 10f;
+                float angle = MathUtils.lerp(startAngle, endAngle, t);
+                float px = arcCenterX + MathUtils.sin(angle) * radiusX;
+                float py = arcCenterY + t * radiusY;
+                if (i > 0) {
+                    shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
+                    shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
+                    shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
+                    shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
+                    shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
+                    shapeRenderer.rectLine(previousX + dir, previousY + 1.5f, px + dir, py + 1.5f, 2.8f);
+                }
+                previousX = px;
+                previousY = py;
+            }
+
+            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.32f * fade);
+            shapeRenderer.triangle(
+                    arcCenterX - 20f, arcCenterY + 18f,
+                    arcCenterX + 20f, arcCenterY + 18f,
+                    arcCenterX, arcCenterY + radiusY + 24f);
+            return;
         } else if (attackDirection == AttackDirection.DOWN) {
-            endX = centerX + MathUtils.sin(progress * MathUtils.PI) * 16f * dir;
-            endY = player.getBounds().y - range * 0.62f;
-            startY = player.getBounds().y + 18f;
+            float arcCenterX = centerX + dir * 4f;
+            float arcCenterY = player.getBounds().y + 28f;
+            float radiusX = 20f;
+            float radiusY = range * 0.64f;
+            float startAngle = 0.78f * dir;
+            float endAngle = -0.78f * dir;
+            float previousX = 0f;
+            float previousY = 0f;
+
+            for (int i = 0; i <= 10; i++) {
+                float t = i / 10f;
+                float angle = MathUtils.lerp(startAngle, endAngle, t);
+                float px = arcCenterX + MathUtils.sin(angle) * radiusX;
+                float py = arcCenterY - t * radiusY;
+                if (i > 0) {
+                    shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
+                    shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
+                    shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
+                    shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
+                    shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
+                    shapeRenderer.rectLine(previousX + dir, previousY - 1.5f, px + dir, py - 1.5f, 2.8f);
+                }
+                previousX = px;
+                previousY = py;
+            }
+
+            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.32f * fade);
+            shapeRenderer.triangle(
+                    arcCenterX - 20f, arcCenterY - 16f,
+                    arcCenterX + 20f, arcCenterY - 16f,
+                    arcCenterX, arcCenterY - radiusY - 22f);
+            return;
         } else {
             float arcCenterX = centerX + dir * 20f;
             float arcCenterY = centerY + MathUtils.lerp(-4f, 5f, progress);
@@ -1218,13 +1335,6 @@ public class FirstScreen implements Screen {
                     arcCenterX + dir * 30f, arcCenterY + 26f);
             return;
         }
-
-        shapeRenderer.setColor(0.18f, 0.10f, 0.08f, fade);
-        shapeRenderer.rectLine(startX - dir * 8f, startY - 6f, startX + dir * 4f, startY + 5f, 7f);
-        shapeRenderer.setColor(0.82f, 0.82f, 0.78f, 0.92f * fade);
-        shapeRenderer.rectLine(startX, startY, endX, endY, weapon.getThickness());
-        shapeRenderer.setColor(0.98f, 0.96f, 0.88f, 0.78f * fade);
-        shapeRenderer.rectLine(startX + dir * 4f, startY + 2f, endX, endY, Math.max(2.5f, weapon.getThickness() * 0.35f));
     }
 
     private void renderPrologueScene() {
@@ -1464,14 +1574,53 @@ public class FirstScreen implements Screen {
         }
     }
 
+    private void loadBedroomTexture() {
+        bedroomTexture = new Texture(Gdx.files.internal("room_intro.png"));
+        bedroomTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+    }
+
+    private void loadHallwayTexture() {
+        hallwayTexture = new Texture(Gdx.files.internal("hallway_second_room.png"));
+        hallwayTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+    }
+
+    private void loadStreetTexture() {
+        streetTexture = new Texture(Gdx.files.internal("street_third_room_v2.png"));
+        streetTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+    }
+
+    private void startNewGameInBedroom() {
+        locationIndex = 1;
+        gameMap = baseMap;
+        prologueActive = false;
+        dialogueVisible = false;
+        watchedBedroomTv = false;
+        enterBedroomAfterPrologue();
+    }
+
+    private void renderWorldTextures() {
+        if (locationIndex == 1 && bedroomTexture != null) {
+            batch.draw(bedroomTexture, 0f, BEDROOM_BACKGROUND_Y, BEDROOM_RIGHT_WALL, BEDROOM_BACKGROUND_HEIGHT);
+            return;
+        }
+        if (locationIndex == 2 && hallwayTexture != null) {
+            batch.draw(hallwayTexture, HALLWAY_BACKGROUND_X, HALLWAY_BACKGROUND_Y, HALLWAY_BACKGROUND_WIDTH, HALLWAY_BACKGROUND_HEIGHT);
+            return;
+        }
+        if (locationIndex == 3 && streetTexture != null) {
+            batch.draw(streetTexture, STREET_BACKGROUND_X, STREET_BACKGROUND_Y, STREET_BACKGROUND_WIDTH, STREET_BACKGROUND_HEIGHT);
+        }
+    }
+
     private void renderRuinedChapelStation() {
-        drawBackdrop(0.018f, 0.010f, 0.014f, 0.120f, 0.020f, 0.030f);
-        drawHolyWindows(260f, 515f, 0.76f, 0.08f, 0.08f);
-        drawHolyWindows(790f, 555f, 0.16f, 0.74f, 0.78f);
-        drawHangingScript();
-        drawPillars(0.080f, 0.020f, 0.026f);
-        drawRails(0.32f, 0.030f, 0.032f);
-        drawGround(0.11f, 0.028f, 0.030f, 0.025f, 0.012f, 0.016f);
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 1f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(0f, 0f, HALLWAY_BACKGROUND_X, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(HALLWAY_BACKGROUND_X + HALLWAY_BACKGROUND_WIDTH, 0f,
+                Constants.WORLD_WIDTH - (HALLWAY_BACKGROUND_X + HALLWAY_BACKGROUND_WIDTH), Constants.WORLD_HEIGHT);
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 0.94f);
+        shapeRenderer.rect(0f, 860f, Constants.WORLD_WIDTH, 140f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, 58f);
     }
 
     private void renderAngelEngineLine() {
@@ -1570,6 +1719,17 @@ public class FirstScreen implements Screen {
         drawGround(0.14f, 0.06f, 0.05f, 0.025f, 0.010f, 0.012f);
     }
 
+    private void renderStreetExterior() {
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 1f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(0f, 0f, STREET_BACKGROUND_X, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(STREET_BACKGROUND_X + STREET_BACKGROUND_WIDTH, 0f,
+                Constants.WORLD_WIDTH - (STREET_BACKGROUND_X + STREET_BACKGROUND_WIDTH), Constants.WORLD_HEIGHT);
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 0.88f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, 72f);
+        shapeRenderer.rect(0f, 860f, Constants.WORLD_WIDTH, 140f);
+    }
+
     private void drawCityBlock(float x, float y, float width, float height, float neonR, float neonG, float neonB, float pulse) {
         shapeRenderer.setColor(0.026f, 0.030f, 0.036f, 1f);
         shapeRenderer.rect(x, y, width, height);
@@ -1653,43 +1813,17 @@ public class FirstScreen implements Screen {
     }
 
     private void renderBedroom() {
-        float pulse = 0.5f + 0.5f * MathUtils.sin(time * 2.4f);
-        shapeRenderer.setColor(0.050f, 0.052f, 0.052f, 1f);
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 1f);
         shapeRenderer.rect(0f, 0f, BEDROOM_RIGHT_WALL, Constants.WORLD_HEIGHT);
-        shapeRenderer.setColor(0.105f, 0.096f, 0.090f, 1f);
-        shapeRenderer.rect(0f, 150f, BEDROOM_RIGHT_WALL, 470f);
-        shapeRenderer.setColor(0.070f, 0.052f, 0.052f, 1f);
-        shapeRenderer.rect(0f, 616f, BEDROOM_RIGHT_WALL, 18f);
-        shapeRenderer.setColor(0.118f, 0.105f, 0.094f, 1f);
-        shapeRenderer.rect(0f, 634f, BEDROOM_RIGHT_WALL, 118f);
-        shapeRenderer.setColor(0.032f, 0.034f, 0.036f, 1f);
+        shapeRenderer.rect(0f, BEDROOM_BACKGROUND_Y + BEDROOM_BACKGROUND_HEIGHT, BEDROOM_RIGHT_WALL, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(0f, 0f, 44f, Constants.WORLD_HEIGHT);
+        shapeRenderer.rect(BEDROOM_RIGHT_WALL - 44f, 0f, 44f, Constants.WORLD_HEIGHT);
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 1f);
         shapeRenderer.rect(BEDROOM_RIGHT_WALL, 0f, Constants.WORLD_WIDTH - BEDROOM_RIGHT_WALL, Constants.WORLD_HEIGHT);
-
-        shapeRenderer.setColor(0.052f, 0.060f, 0.064f, 1f);
-        shapeRenderer.rect(480f, 340f, 340f, 220f);
-        shapeRenderer.setColor(0.12f, 0.18f, 0.19f, 1f);
-        shapeRenderer.rect(498f, 358f, 304f, 184f);
-        shapeRenderer.setColor(0.58f, 0.78f + pulse * 0.08f, 0.78f, 0.55f);
-        shapeRenderer.rect(520f, 380f, 118f, 140f);
-        shapeRenderer.rect(662f, 380f, 118f, 140f);
-        shapeRenderer.setColor(0.035f, 0.044f, 0.048f, 1f);
-        shapeRenderer.rect(646f, 358f, 12f, 184f);
-        shapeRenderer.rect(498f, 445f, 304f, 12f);
-
-        renderBed();
-
-        shapeRenderer.setColor(0.040f, 0.038f, 0.036f, 1f);
-        shapeRenderer.rect(930f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 92f, 128f);
-        shapeRenderer.setColor(0.16f, 0.13f, 0.10f, 1f);
-        shapeRenderer.rect(942f, Constants.GROUND_Y + Constants.GROUND_HEIGHT + 98f, 68f, 9f);
-        shapeRenderer.setColor(0.68f, 0.50f, 0.24f, 0.72f);
-        shapeRenderer.rect(960f, Constants.GROUND_Y + Constants.GROUND_HEIGHT + 58f, 30f, 30f);
-
-        drawGround(0.18f, 0.125f, 0.095f, 0.060f, 0.044f, 0.042f);
-        shapeRenderer.setColor(0.032f, 0.034f, 0.036f, 1f);
+        shapeRenderer.setColor(0.05f, 0.04f, 0.035f, 0.55f);
+        shapeRenderer.rect(0f, 0f, BEDROOM_RIGHT_WALL, 118f);
+        shapeRenderer.setColor(0.010f, 0.010f, 0.012f, 1f);
         shapeRenderer.rect(BEDROOM_RIGHT_WALL, 0f, Constants.WORLD_WIDTH - BEDROOM_RIGHT_WALL, Constants.WORLD_HEIGHT);
-        shapeRenderer.setColor(0.070f, 0.052f, 0.052f, 1f);
-        shapeRenderer.rect(BEDROOM_RIGHT_WALL - 16f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 16f, 500f);
     }
 
     private void renderBed() {
@@ -1820,10 +1954,6 @@ public class FirstScreen implements Screen {
     }
 
     private void renderPlayer() {
-        if (locationIndex == -1 && lyingInBed) {
-            renderLyingPlayer();
-            return;
-        }
         drawHero(player.getBounds().x, player.getBounds().y, 1f, player.getVelocityX(), true);
     }
 
@@ -1838,25 +1968,22 @@ public class FirstScreen implements Screen {
         float drawWidth = attackFrame ? HERO_ATTACK_DRAW_WIDTH : HERO_BODY_DRAW_WIDTH;
         float drawHeight = HERO_DRAW_HEIGHT;
 
-        if (locationIndex == -1 && lyingInBed) {
-            frame = heroFrames[0];
-            drawWidth = HERO_BODY_DRAW_WIDTH;
-            drawHeight = HERO_DRAW_HEIGHT;
-            float centerX = BEDROOM_BED.x + 124f;
-            float centerY = BEDROOM_BED.y + 54f;
-            float x = centerX - drawWidth * 0.5f;
-            float y = centerY - drawHeight * 0.5f;
-            batch.draw(frame, x, y, drawWidth * 0.5f, drawHeight * 0.5f,
-                    drawWidth, drawHeight, 1f, 1f, -90f);
-            return;
-        }
-
         Rectangle b = player.getBounds();
         float x = b.x + b.width * 0.5f - drawWidth * 0.5f;
         if (attackFrame) {
             x += player.isFacingRight() ? 18f : -18f;
         }
         float y = b.y - 4f;
+        if (locationIndex >= 1 && locationIndex <= 3) {
+            float locationScale = getLocationPlayerScale();
+            drawWidth *= locationScale;
+            drawHeight *= locationScale;
+            x = b.x + b.width * 0.5f - drawWidth * 0.5f;
+            if (attackFrame) {
+                x += player.isFacingRight() ? 20f : -20f;
+            }
+            y = b.y - 4f;
+        }
         boolean flip = player.isFacingRight();
         batch.draw(frame, flip ? x + drawWidth : x, y, flip ? -drawWidth : drawWidth, drawHeight);
     }
@@ -1891,26 +2018,6 @@ public class FirstScreen implements Screen {
             return 8 + (int)(player.getAnimationTime() * 0.45f) % 3;
         }
         return 1;
-    }
-
-    private void renderLyingPlayer() {
-        float x = BEDROOM_BED.x + 76f;
-        float y = BEDROOM_BED.y + 34f;
-        float breathe = MathUtils.sin(time * 2.2f) * 1.4f;
-
-        shapeRenderer.setColor(0.030f, 0.035f, 0.040f, 1f);
-        shapeRenderer.rect(x + 24f, y + breathe, 104f, 24f);
-        shapeRenderer.setColor(0.92f, 0.80f, 0.62f, 1f);
-        shapeRenderer.rect(x + 8f, y + 3f + breathe, 24f, 20f);
-        shapeRenderer.setColor(0.92f, 0.78f, 0.20f, 1f);
-        shapeRenderer.rect(x + 4f, y + 19f + breathe, 34f, 10f);
-        shapeRenderer.setColor(0.04f, 0.045f, 0.052f, 1f);
-        shapeRenderer.rect(x + 38f, y + 18f + breathe, 68f, 16f);
-        shapeRenderer.setColor(0.09f, 0.10f, 0.11f, 1f);
-        shapeRenderer.rect(x + 112f, y + 2f + breathe, 28f, 7f);
-        shapeRenderer.rect(x + 114f, y + 18f + breathe, 24f, 7f);
-        shapeRenderer.setColor(0.35f, 0.39f, 0.42f, 1f);
-        shapeRenderer.rect(x + 42f, y + 25f + breathe, 58f, 4f);
     }
 
     private void drawHero(float x, float y, float scale, float motion, boolean worldScale) {
@@ -1987,15 +2094,34 @@ public class FirstScreen implements Screen {
         }
 
         if (!dialogueVisible) {
-            if (locationIndex == -1 && isNear(player.getBounds(), BEDROOM_BED, 80f)) {
-                font.draw(batch, lyingInBed ? "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u0441\u0442\u0430\u0442\u044c" : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u043b\u0435\u0447\u044c", uiCamera.viewportWidth / 2f - 112f, 116f);
+            String prompt = null;
+            if (locationIndex == 1 && isNear(player.getBounds(), BEDROOM_DOOR, 70f)) {
+                prompt = !watchedBedroomTv
+                        ? "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0438 \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440"
+                        : doorLockedUntilPlayerMoves
+                        ? "\u041e\u0442\u043e\u0439\u0434\u0438 \u043e\u0442 \u0434\u0432\u0435\u0440\u0438 \u0438 \u0432\u0435\u0440\u043d\u0438\u0441\u044c"
+                        : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438";
             }
-            if (locationIndex == 0 && isNear(player.getBounds(), SCHOLAR_BOUNDS, 80f)) {
-                font.draw(batch, "\u041d\u0430\u0436\u043c\u0438 E", uiCamera.viewportWidth / 2f - 42f, 116f);
+            if (prompt == null && locationIndex == 1 && isNear(player.getBounds(), BEDROOM_TV, 52f)) {
+                prompt = watchedBedroomTv
+                        ? "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440"
+                        : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0442\u0435\u043b\u0435\u0432\u0438\u0437\u043e\u0440";
             }
-            Rectangle door = getActiveDoor();
-            if (!lyingInBed && isNear(player.getBounds(), door, 70f)) {
-                font.draw(batch, doorLockedUntilPlayerMoves ? "\u041e\u0442\u043e\u0439\u0434\u0438 \u043e\u0442 \u0434\u0432\u0435\u0440\u0438 \u0438 \u0432\u0435\u0440\u043d\u0438\u0441\u044c" : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438", uiCamera.viewportWidth / 2f - 112f, 92f);
+            if (prompt == null && locationIndex == 3 && !knifeCollected && isNear(player.getBounds(), STREET_KNIFE_PICKUP, KNIFE_PICKUP_PROMPT_RANGE)) {
+                prompt = "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u043e\u0431\u0440\u0430\u0442\u044c \u043d\u043e\u0436";
+            }
+            if (prompt == null) {
+                Rectangle door = getActiveDoor();
+                float promptRange = locationIndex == 3 ? 96f : 70f;
+                if (isNear(player.getBounds(), door, promptRange)) {
+                    prompt = doorLockedUntilPlayerMoves
+                            ? "\u041e\u0442\u043e\u0439\u0434\u0438 \u043e\u0442 \u0434\u0432\u0435\u0440\u0438 \u0438 \u0432\u0435\u0440\u043d\u0438\u0441\u044c"
+                            : "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438";
+                }
+            }
+            if (prompt != null) {
+                glyphLayout.setText(font, prompt);
+                font.draw(batch, prompt, uiCamera.viewportWidth * 0.5f - glyphLayout.width * 0.5f, BEDROOM_PROMPT_Y);
             }
         }
     }
@@ -2020,7 +2146,7 @@ public class FirstScreen implements Screen {
     }
 
     private void renderHealthBar() {
-        if (locationIndex != 2) {
+        if (locationIndex != 99 || dungeonEnemies.size == 0) {
             return;
         }
         float barWidth = 260f;
@@ -2041,7 +2167,7 @@ public class FirstScreen implements Screen {
     }
 
     private void renderUiPanels() {
-        if (!prologueActive && locationIndex == 2) {
+        if (!prologueActive && locationIndex == 99 && dungeonEnemies.size > 0) {
             renderHealthBarPanel();
         }
 
@@ -2057,6 +2183,38 @@ public class FirstScreen implements Screen {
             shapeRenderer.rect(64f, 170f, uiCamera.viewportWidth - 128f, 6f);
             renderDialoguePortraits(pulse);
         }
+
+        if (tvScreenVisible) {
+            renderTvOverlay();
+        }
+    }
+
+    private void renderTvOverlay() {
+        float panelWidth = uiCamera.viewportWidth - 200f;
+        float panelHeight = uiCamera.viewportHeight - 140f;
+        float x = (uiCamera.viewportWidth - panelWidth) * 0.5f;
+        float y = (uiCamera.viewportHeight - panelHeight) * 0.5f;
+        float staticPulse = 0.45f + 0.2f * MathUtils.sin(time * 22f);
+
+        shapeRenderer.setColor(0f, 0f, 0f, 0.72f);
+        shapeRenderer.rect(0f, 0f, uiCamera.viewportWidth, uiCamera.viewportHeight);
+        shapeRenderer.setColor(0.12f, 0.12f, 0.12f, 1f);
+        shapeRenderer.rect(x - 14f, y - 14f, panelWidth + 28f, panelHeight + 28f);
+        shapeRenderer.setColor(0.72f, 0.72f, 0.72f, 1f);
+        shapeRenderer.rect(x, y, panelWidth, panelHeight);
+        shapeRenderer.setColor(staticPulse, staticPulse, staticPulse, 1f);
+        shapeRenderer.rect(x + 8f, y + 8f, panelWidth - 16f, panelHeight - 16f);
+        shapeRenderer.setColor(0.22f, 0.22f, 0.22f, 0.45f);
+        for (int i = 0; i < 18; i++) {
+            float lineY = y + 18f + i * ((panelHeight - 36f) / 18f);
+            shapeRenderer.rect(x + 8f, lineY, panelWidth - 16f, 3f);
+        }
+        float progressWidth = panelWidth - 120f;
+        float progress = MathUtils.clamp(tvWatchTimer / TV_REQUIRED_WATCH_TIME, 0f, 1f);
+        shapeRenderer.setColor(0.08f, 0.08f, 0.08f, 1f);
+        shapeRenderer.rect(x + 60f, y + 22f, progressWidth, 16f);
+        shapeRenderer.setColor(0.58f, 0.80f, 0.72f, 1f);
+        shapeRenderer.rect(x + 60f, y + 22f, progressWidth * progress, 16f);
     }
 
     private void renderPauseMenuPanels() {
@@ -2283,6 +2441,22 @@ public class FirstScreen implements Screen {
         font.draw(batch, getVisibleDialogueCharacters() < currentText[dialogueLine].length() ? "\u043f\u0440\u043e\u043f\u0443\u0441\u043a" : "\u0434\u0430\u043b\u044c\u0448\u0435", width - 96f, 76f);
     }
 
+    private void renderTvOverlayText() {
+        if (!tvScreenVisible) {
+            return;
+        }
+
+        float centerX = uiCamera.viewportWidth * 0.5f;
+        float centerY = uiCamera.viewportHeight * 0.5f;
+        font.setColor(0.08f, 0.08f, 0.08f, 1f);
+        font.draw(batch, "\u0421\u0442\u0430\u0442\u0438\u043a\u0430...", centerX - 56f, centerY + 8f);
+        if (tvWatchTimer < TV_REQUIRED_WATCH_TIME) {
+            font.draw(batch, "\u0421\u043c\u043e\u0442\u0440\u0438 \u044d\u043a\u0440\u0430\u043d", centerX - 78f, centerY - 28f);
+        } else {
+            font.draw(batch, "\u041f\u0440\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u043d\u043e. \u041d\u0430\u0436\u043c\u0438 E", centerX - 114f, centerY - 28f);
+        }
+    }
+
     private void drawWrappedText(String text, float x, float y, float maxWidth, float lineHeight, int maxLines) {
         String[] words = text.split(" ");
         StringBuilder lineText = new StringBuilder();
@@ -2336,6 +2510,15 @@ public class FirstScreen implements Screen {
         shapeRenderer.dispose();
         batch.dispose();
         font.dispose();
+        if (streetTexture != null) {
+            streetTexture.dispose();
+        }
+        if (hallwayTexture != null) {
+            hallwayTexture.dispose();
+        }
+        if (bedroomTexture != null) {
+            bedroomTexture.dispose();
+        }
         if (heroTexture != null) {
             heroTexture.dispose();
         }

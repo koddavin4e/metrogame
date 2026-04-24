@@ -3,7 +3,6 @@ package com.metrohorror.game.screen.location;
 public enum LocationId {
     BEDROOM(BedroomLocation.INDEX, BedroomLocation.DISPLAY_NAME),
     CHAPEL(ChapelLocation.INDEX, ChapelLocation.DISPLAY_NAME),
-    ENGINE(EngineLocation.INDEX, EngineLocation.DISPLAY_NAME),
     DUNGEON(DungeonLocation.INDEX, DungeonLocation.DISPLAY_NAME);
 
     private final int index;
@@ -28,6 +27,6 @@ public enum LocationId {
                 return location;
             }
         }
-        return CHAPEL;
+        return BEDROOM;
     }
 }
