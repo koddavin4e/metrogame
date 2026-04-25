@@ -18,11 +18,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
-<<<<<<< HEAD
-import com.badlogic.gdx.utils.viewport.FitViewport;
-=======
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
->>>>>>> f29aecc (Полный экран, масштабируемость)
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.metrohorror.game.MetroHorrorGame;
 import com.metrohorror.game.entities.Enemy;
@@ -201,17 +197,10 @@ public class FirstScreen implements Screen {
         }
 
         camera = new OrthographicCamera();
-<<<<<<< HEAD
-        worldViewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
-
-        uiCamera = new OrthographicCamera();
-        hudViewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, uiCamera);
-=======
         worldViewport = new ScreenViewport(camera);
 
         uiCamera = new OrthographicCamera();
         hudViewport = new ScreenViewport(uiCamera);
->>>>>>> f29aecc (Полный экран, масштабируемость)
         worldViewport.apply(true);
         hudViewport.apply(true);
 
@@ -392,13 +381,8 @@ public class FirstScreen implements Screen {
     }
 
     private void setupPauseMenuBounds() {
-<<<<<<< HEAD
-        float buttonX = VIRTUAL_WIDTH / 2f - PAUSE_MENU_WIDTH / 2f;
-        float buttonY = VIRTUAL_HEIGHT / 2f + 88f;
-=======
         float buttonX = uiCamera.viewportWidth * 0.5f - PAUSE_MENU_WIDTH * 0.5f;
         float buttonY = uiCamera.viewportHeight * 0.5f + 88f;
->>>>>>> f29aecc (Полный экран, масштабируемость)
         for (int i = 0; i < pauseButtonBounds.length; i++) {
             pauseButtonBounds[i] = new Rectangle(
                     buttonX,
@@ -2455,14 +2439,6 @@ public class FirstScreen implements Screen {
             return;
         }
 
-<<<<<<< HEAD
-        float panelX = VIRTUAL_WIDTH / 2f - 230f;
-        float panelY = VIRTUAL_HEIGHT / 2f - 190f;
-        float pulse = 0.5f + 0.5f * MathUtils.sin(time * 3.2f);
-
-        shapeRenderer.setColor(0.004f, 0.004f, 0.006f, 0.48f);
-        shapeRenderer.rect(0f, 0f, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-=======
         float uiWidth = uiCamera.viewportWidth;
         float uiHeight = uiCamera.viewportHeight;
         float panelX = uiWidth * 0.5f - 230f;
@@ -2471,7 +2447,6 @@ public class FirstScreen implements Screen {
 
         shapeRenderer.setColor(0.004f, 0.004f, 0.006f, 0.48f);
         shapeRenderer.rect(0f, 0f, uiWidth, uiHeight);
->>>>>>> f29aecc (Полный экран, масштабируемость)
         shapeRenderer.setColor(0.018f, 0.022f, 0.026f, 0.78f);
         shapeRenderer.rect(panelX, panelY, 460f, 420f);
         shapeRenderer.setColor(0.48f, 0.68f, 0.62f, 0.82f);
@@ -2512,15 +2487,10 @@ public class FirstScreen implements Screen {
             return;
         }
 
-<<<<<<< HEAD
-        font.setColor(0.94f, 0.90f, 0.82f, 1f);
-        font.draw(batch, "\u041f\u0430\u0443\u0437\u0430", VIRTUAL_WIDTH / 2f - 34f, VIRTUAL_HEIGHT / 2f + 204f);
-=======
         float uiWidth = uiCamera.viewportWidth;
         float uiHeight = uiCamera.viewportHeight;
         font.setColor(0.94f, 0.90f, 0.82f, 1f);
         font.draw(batch, "\u041f\u0430\u0443\u0437\u0430", uiWidth * 0.5f - 34f, uiHeight * 0.5f + 204f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
 
         for (int i = 0; i < pauseButtonBounds.length; i++) {
             Rectangle bounds = pauseButtonBounds[i];
@@ -2530,18 +2500,6 @@ public class FirstScreen implements Screen {
 
         if (pausePanel == PausePanel.ACHIEVEMENTS) {
             font.setColor(0.90f, 0.94f, 0.88f, 1f);
-<<<<<<< HEAD
-            font.draw(batch, "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f", VIRTUAL_WIDTH / 2f - 78f, VIRTUAL_HEIGHT / 2f - 94f);
-            font.setColor(0.70f, 0.78f, 0.74f, 1f);
-            font.draw(batch, "\u041f\u0430\u043b\u043e\u043c\u043d\u0438\u043a | \u041e\u0441\u043a\u043e\u043b\u043e\u043a \u0441\u0432\u0435\u0442\u0430 | \u041f\u043e\u0434\u0437\u0435\u043c\u043d\u044b\u0439 \u0437\u043e\u0432", VIRTUAL_WIDTH / 2f - 184f, VIRTUAL_HEIGHT / 2f - 126f);
-            font.draw(batch, "\u041f\u0440\u043e\u0433\u0440\u0435\u0441\u0441 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043c\u0435\u0447\u0430\u0442\u044c\u0441\u044f \u043f\u043e \u0445\u043e\u0434\u0443 \u0438\u0433\u0440\u044b.", VIRTUAL_WIDTH / 2f - 168f, VIRTUAL_HEIGHT / 2f - 154f);
-        } else if (pausePanel == PausePanel.SETTINGS) {
-            font.setColor(0.90f, 0.94f, 0.88f, 1f);
-            font.draw(batch, "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438", VIRTUAL_WIDTH / 2f - 68f, VIRTUAL_HEIGHT / 2f - 94f);
-            font.setColor(0.70f, 0.78f, 0.74f, 1f);
-            font.draw(batch, "\u0420\u0430\u0437\u0434\u0435\u043b \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435.", VIRTUAL_WIDTH / 2f - 102f, VIRTUAL_HEIGHT / 2f - 126f);
-            font.draw(batch, "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 Escape \u0438\u043b\u0438 \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f.", VIRTUAL_WIDTH / 2f - 208f, VIRTUAL_HEIGHT / 2f - 154f);
-=======
             font.draw(batch, "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f", uiWidth * 0.5f - 78f, uiHeight * 0.5f - 94f);
             font.setColor(0.70f, 0.78f, 0.74f, 1f);
             font.draw(batch, "\u041f\u0430\u043b\u043e\u043c\u043d\u0438\u043a | \u041e\u0441\u043a\u043e\u043b\u043e\u043a \u0441\u0432\u0435\u0442\u0430 | \u041f\u043e\u0434\u0437\u0435\u043c\u043d\u044b\u0439 \u0437\u043e\u0432", uiWidth * 0.5f - 184f, uiHeight * 0.5f - 126f);
@@ -2552,7 +2510,6 @@ public class FirstScreen implements Screen {
             font.setColor(0.70f, 0.78f, 0.74f, 1f);
             font.draw(batch, "\u0420\u0430\u0437\u0434\u0435\u043b \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435.", uiWidth * 0.5f - 102f, uiHeight * 0.5f - 126f);
             font.draw(batch, "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 Escape \u0438\u043b\u0438 \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f.", uiWidth * 0.5f - 208f, uiHeight * 0.5f - 154f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
         }
     }
 
@@ -2763,10 +2720,7 @@ public class FirstScreen implements Screen {
     public void resize(int width, int height) {
         worldViewport.update(width, height, false);
         hudViewport.update(width, height, true);
-<<<<<<< HEAD
-=======
         setupPauseMenuBounds();
->>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     @Override public void pause() {}

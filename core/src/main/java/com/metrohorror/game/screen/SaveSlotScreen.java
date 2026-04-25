@@ -13,11 +13,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
-<<<<<<< HEAD
-import com.badlogic.gdx.utils.viewport.FitViewport;
-=======
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
->>>>>>> f29aecc (Полный экран, масштабируемость)
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.metrohorror.game.MetroHorrorGame;
 
@@ -27,13 +23,7 @@ public class SaveSlotScreen implements Screen {
         LOAD
     }
 
-<<<<<<< HEAD
-    private static final float VIRTUAL_WIDTH = 1280f;
-    private static final float VIRTUAL_HEIGHT = 720f;
-    private static final Rectangle BACK_BUTTON = new Rectangle(460f, 130f, 360f, 54f);
-=======
     private static final Rectangle BACK_BUTTON = new Rectangle(0f, 0f, 360f, 54f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
 
     private final MetroHorrorGame game;
     private final Mode mode;
@@ -61,11 +51,7 @@ public class SaveSlotScreen implements Screen {
     @Override
     public void show() {
         camera = new OrthographicCamera();
-<<<<<<< HEAD
-        viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
-=======
         viewport = new ScreenViewport(camera);
->>>>>>> f29aecc (Полный экран, масштабируемость)
         viewport.apply(true);
 
         shapeRenderer = new ShapeRenderer();
@@ -73,17 +59,6 @@ public class SaveSlotScreen implements Screen {
         titleFont = createFont(42);
         textFont = createFont(24);
         glyphLayout = new GlyphLayout();
-<<<<<<< HEAD
-
-        float slotWidth = 520f;
-        float slotHeight = 62f;
-        float slotGap = 18f;
-        float slotX = VIRTUAL_WIDTH / 2f - slotWidth / 2f;
-        float slotY = 410f;
-        for (int i = 0; i < slotBounds.length; i++) {
-            slotBounds[i] = new Rectangle(slotX, slotY - i * (slotHeight + slotGap), slotWidth, slotHeight);
-        }
-=======
         updateLayout();
     }
 
@@ -97,7 +72,6 @@ public class SaveSlotScreen implements Screen {
             slotBounds[i] = new Rectangle(slotX, slotY - i * (slotHeight + slotGap), slotWidth, slotHeight);
         }
         BACK_BUTTON.setPosition(camera.viewportWidth * 0.5f - BACK_BUTTON.width * 0.5f, camera.viewportHeight * 0.5f - 230f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     @Override
@@ -148,7 +122,7 @@ public class SaveSlotScreen implements Screen {
         if (mode == Mode.SAVE) {
             if (returnScreen instanceof FirstScreen) {
                 ((FirstScreen) returnScreen).saveToSlot(slot);
-                statusText = "Слот " + (slot + 1) + " сохранен.";
+                statusText = "РЎР»РѕС‚ " + (slot + 1) + " СЃРѕС…СЂР°РЅРµРЅ.";
             }
             return;
         }
@@ -156,7 +130,7 @@ public class SaveSlotScreen implements Screen {
         if (FirstScreen.hasSave(slot)) {
             game.setScreen(new FirstScreen(game, slot));
         } else {
-            statusText = "Этот слот пуст.";
+            statusText = "Р­С‚РѕС‚ СЃР»РѕС‚ РїСѓСЃС‚.";
         }
     }
 
@@ -169,14 +143,6 @@ public class SaveSlotScreen implements Screen {
     }
 
     private void renderPanels() {
-<<<<<<< HEAD
-        shapeRenderer.setColor(0.030f, 0.035f, 0.038f, 0.92f);
-        shapeRenderer.rect(300f, 170f, 680f, 350f);
-        shapeRenderer.setColor(0.48f, 0.68f, 0.62f, 0.86f);
-        shapeRenderer.rect(300f, 512f, 680f, 6f);
-        shapeRenderer.setColor(0.58f, 0.14f, 0.13f, 0.80f);
-        shapeRenderer.rect(300f, 170f, 680f, 4f);
-=======
         float panelX = camera.viewportWidth * 0.5f - 340f;
         float panelY = camera.viewportHeight * 0.5f - 190f;
 
@@ -186,7 +152,6 @@ public class SaveSlotScreen implements Screen {
         shapeRenderer.rect(panelX, panelY + 342f, 680f, 6f);
         shapeRenderer.setColor(0.58f, 0.14f, 0.13f, 0.80f);
         shapeRenderer.rect(panelX, panelY, 680f, 4f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
 
         for (int i = 0; i < slotBounds.length; i++) {
             renderButton(slotBounds[i], i == hoveredSlot, FirstScreen.hasSave(i));
@@ -211,41 +176,26 @@ public class SaveSlotScreen implements Screen {
 
     private void renderText() {
         titleFont.setColor(0.96f, 0.90f, 0.82f, 1f);
-<<<<<<< HEAD
-        drawCentered(titleFont, mode == Mode.SAVE ? "Сохранение" : "Загрузка", VIRTUAL_WIDTH / 2f, 570f);
-=======
-        drawCentered(titleFont, mode == Mode.SAVE ? "Сохранение" : "Загрузка", camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f + 210f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
+        drawCentered(titleFont, mode == Mode.SAVE ? "РЎРѕС…СЂР°РЅРµРЅРёРµ" : "Р—Р°РіСЂСѓР·РєР°", camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f + 210f);
 
         for (int i = 0; i < slotBounds.length; i++) {
             Rectangle bounds = slotBounds[i];
             textFont.setColor(i == hoveredSlot ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
-            textFont.draw(batch, "Слот " + (i + 1), bounds.x + 32f, bounds.y + 40f);
+            textFont.draw(batch, "РЎР»РѕС‚ " + (i + 1), bounds.x + 32f, bounds.y + 40f);
             textFont.setColor(new Color(0.70f, 0.78f, 0.74f, 1f));
             textFont.draw(batch, FirstScreen.getSaveSummary(i), bounds.x + 170f, bounds.y + 40f);
         }
 
         textFont.setColor(0.70f, 0.78f, 0.74f, 1f);
-<<<<<<< HEAD
-        drawCentered(textFont, statusText, VIRTUAL_WIDTH / 2f, 214f);
-
-        textFont.setColor(hoveredBackButton ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
-        drawCentered(textFont, "Назад", BACK_BUTTON.x + BACK_BUTTON.width / 2f, BACK_BUTTON.y + 36f);
-=======
         drawCentered(textFont, statusText, camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f - 146f);
 
         textFont.setColor(hoveredBackButton ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
-        drawCentered(textFont, "Назад", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
+        drawCentered(textFont, "РќР°Р·Р°Рґ", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
     }
 
     private void drawCentered(BitmapFont font, String text, float centerX, float y) {
         glyphLayout.setText(font, text);
-<<<<<<< HEAD
-        font.draw(batch, text, centerX - glyphLayout.width / 2f, y);
-=======
         font.draw(batch, text, centerX - glyphLayout.width * 0.5f, y);
->>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     private BitmapFont createFont(int size) {
@@ -253,9 +203,9 @@ public class SaveSlotScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = size;
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
-                + "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
-                + "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
-                + "«»№….,!?-:()|/";
+                + "РђР‘Р’Р“Р”Р•РЃР–Р—РР™РљР›РњРќРћРџР РЎРўРЈР¤РҐР¦Р§РЁР©РЄР«Р¬Р­Р®РЇ"
+                + "Р°Р±РІРіРґРµС‘Р¶Р·РёР№РєР»РјРЅРѕРїСЂСЃС‚СѓС„С…С†С‡С€С‰СЉС‹СЊСЌСЋСЏ"
+                + "В«В»в„–вЂ¦.,!?-:()|/";
         BitmapFont font = generator.generateFont(parameter);
         generator.dispose();
         return font;
@@ -264,10 +214,7 @@ public class SaveSlotScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
-<<<<<<< HEAD
-=======
         updateLayout();
->>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     @Override public void pause() {}

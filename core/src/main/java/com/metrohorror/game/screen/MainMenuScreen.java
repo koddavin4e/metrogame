@@ -11,33 +11,20 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
-<<<<<<< HEAD
-import com.badlogic.gdx.utils.viewport.FitViewport;
-=======
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
->>>>>>> f29aecc (Полный экран, масштабируемость)
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.metrohorror.game.MetroHorrorGame;
 
 public class MainMenuScreen implements Screen {
-<<<<<<< HEAD
-    private static final float VIRTUAL_WIDTH = 1280f;
-    private static final float VIRTUAL_HEIGHT = 720f;
-
-=======
->>>>>>> f29aecc (Полный экран, масштабируемость)
     private final MetroHorrorGame game;
     private final Rectangle[] buttonBounds = new Rectangle[4];
     private final String[] buttonLabels = {
-            "Новая игра",
-            "Продолжить",
-            "Достижения",
-            "Настройки"
+            "\u041d\u043e\u0432\u0430\u044f \u0438\u0433\u0440\u0430",
+            "\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c",
+            "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f",
+            "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438"
     };
-<<<<<<< HEAD
-=======
     private final Vector3 pointer = new Vector3();
->>>>>>> f29aecc (Полный экран, масштабируемость)
 
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -45,11 +32,6 @@ public class MainMenuScreen implements Screen {
     private BitmapFont titleFont;
     private BitmapFont menuFont;
     private GlyphLayout glyphLayout;
-<<<<<<< HEAD
-    private final Vector3 pointer = new Vector3();
-
-=======
->>>>>>> f29aecc (Полный экран, масштабируемость)
     private int hoveredButton = -1;
     private boolean startNewGameRequested;
 
@@ -60,25 +42,13 @@ public class MainMenuScreen implements Screen {
     @Override
     public void show() {
         camera = new OrthographicCamera();
-<<<<<<< HEAD
-        viewport = new FitViewport(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, camera);
-=======
         viewport = new ScreenViewport(camera);
->>>>>>> f29aecc (Полный экран, масштабируемость)
         viewport.apply(true);
 
         batch = new SpriteBatch();
         titleFont = createFont(46);
         menuFont = createFont(24);
         glyphLayout = new GlyphLayout();
-<<<<<<< HEAD
-
-        float buttonWidth = 360f;
-        float buttonHeight = 48f;
-        float buttonGap = 18f;
-        float buttonX = VIRTUAL_WIDTH / 2f - buttonWidth / 2f;
-        float buttonY = 390f;
-=======
         updateLayout();
     }
 
@@ -88,7 +58,6 @@ public class MainMenuScreen implements Screen {
         float buttonGap = 18f;
         float buttonX = camera.viewportWidth * 0.5f - buttonWidth * 0.5f;
         float buttonY = camera.viewportHeight * 0.5f + 30f;
->>>>>>> f29aecc (Полный экран, масштабируемость)
         for (int i = 0; i < buttonBounds.length; i++) {
             buttonBounds[i] = new Rectangle(buttonX, buttonY - i * (buttonHeight + buttonGap), buttonWidth, buttonHeight);
         }
@@ -142,30 +111,18 @@ public class MainMenuScreen implements Screen {
 
     private void renderText() {
         titleFont.setColor(0.96f, 0.90f, 0.82f, 1f);
-<<<<<<< HEAD
-        drawCentered(titleFont, "Paradise Disappear", VIRTUAL_WIDTH / 2f, 560f);
-=======
         drawCentered(titleFont, "Paradise Disappear", camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f + 200f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
 
         for (int i = 0; i < buttonBounds.length; i++) {
             Rectangle bounds = buttonBounds[i];
             menuFont.setColor(i == hoveredButton ? Color.WHITE : new Color(0.72f, 0.74f, 0.72f, 1f));
-<<<<<<< HEAD
-            drawCentered(menuFont, buttonLabels[i], bounds.x + bounds.width / 2f, bounds.y + 34f);
-=======
             drawCentered(menuFont, buttonLabels[i], bounds.x + bounds.width * 0.5f, bounds.y + 34f);
->>>>>>> f29aecc (Полный экран, масштабируемость)
         }
     }
 
     private void drawCentered(BitmapFont font, String text, float centerX, float y) {
         glyphLayout.setText(font, text);
-<<<<<<< HEAD
-        font.draw(batch, text, centerX - glyphLayout.width / 2f, y);
-=======
         font.draw(batch, text, centerX - glyphLayout.width * 0.5f, y);
->>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     private BitmapFont createFont(int size) {
@@ -173,9 +130,9 @@ public class MainMenuScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = size;
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
-                + "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
-                + "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
-                + "«»№….,!?-:()";
+                + "\u0410\u0411\u0412\u0413\u0414\u0415\u0401\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f"
+                + "\u0430\u0431\u0432\u0433\u0434\u0435\u0451\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f"
+                + "\u00ab\u00bb\u2116\u2026.,!?-:()";
         BitmapFont font = generator.generateFont(parameter);
         generator.dispose();
         return font;
@@ -184,10 +141,7 @@ public class MainMenuScreen implements Screen {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
-<<<<<<< HEAD
-=======
         updateLayout();
->>>>>>> f29aecc (Полный экран, масштабируемость)
     }
 
     @Override public void pause() {}
