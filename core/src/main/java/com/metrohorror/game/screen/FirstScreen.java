@@ -38,6 +38,8 @@ import com.metrohorror.game.world.Platform;
 public class FirstScreen implements Screen {
     private static final float VIRTUAL_WIDTH = 1280f;
     private static final float VIRTUAL_HEIGHT = 720f;
+    private static final float MAX_VISIBLE_WORLD_WIDTH = 1920f;
+    private static final float MAX_VISIBLE_WORLD_HEIGHT = 1080f;
     private static final Rectangle SCHOLAR_BOUNDS = new Rectangle(610f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 42f, 72f);
     private static final Rectangle CHAPEL_BEDROOM_DOOR = new Rectangle(1096f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 96f, 156f);
     private static final Rectangle CHAPEL_DOOR = new Rectangle(648f, Constants.GROUND_Y + Constants.GROUND_HEIGHT, 108f, 176f);
@@ -97,10 +99,11 @@ public class FirstScreen implements Screen {
     private static final float PAUSE_MENU_WIDTH = 360f;
     private static final float PAUSE_BUTTON_HEIGHT = 54f;
     private static final float PAUSE_BUTTON_GAP = 14f;
-    private static final float INVENTORY_PANEL_WIDTH = 700f;
-    private static final float INVENTORY_PANEL_HEIGHT = 456f;
-    private static final float INVENTORY_SLOT_SIZE = 50f;
-    private static final float INVENTORY_SLOT_GAP = 10f;
+    private static final float INVENTORY_PANEL_WIDTH = 1300f;
+    private static final float INVENTORY_PANEL_HEIGHT = 800f;
+    private static final float INVENTORY_HAND_SLOT_SIZE = 58f;
+    private static final float INVENTORY_BAG_SLOT_SIZE = 72f;
+    private static final float INVENTORY_BAG_SLOT_GAP = 22f;
     private static final int INVENTORY_BAG_COLUMNS = 4;
     private static final int HERO_FRAME_SIZE = 128;
     private static final int HERO_FRAME_COUNT = 17;
@@ -197,7 +200,7 @@ public class FirstScreen implements Screen {
         }
 
         camera = new OrthographicCamera();
-        worldViewport = new ScreenViewport(camera);
+        worldViewport = createCappedWorldViewport(camera);
 
         uiCamera = new OrthographicCamera();
         hudViewport = new ScreenViewport(uiCamera);
@@ -229,6 +232,19 @@ public class FirstScreen implements Screen {
         } else {
             startNewGameInBedroom();
         }
+    }
+
+    private Viewport createCappedWorldViewport(OrthographicCamera worldCamera) {
+        return new ScreenViewport(worldCamera) {
+            @Override
+            public void update(int screenWidth, int screenHeight, boolean centerCamera) {
+                float worldWidth = Math.min(screenWidth * getUnitsPerPixel(), MAX_VISIBLE_WORLD_WIDTH);
+                float worldHeight = Math.min(screenHeight * getUnitsPerPixel(), MAX_VISIBLE_WORLD_HEIGHT);
+                setScreenBounds(0, 0, screenWidth, screenHeight);
+                setWorldSize(worldWidth, worldHeight);
+                apply(centerCamera);
+            }
+        };
     }
 
     @Override
@@ -277,6 +293,21 @@ public class FirstScreen implements Screen {
         renderPauseMenuPanels();
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        if (!prologueActive && inventoryVisible) {
+            batch.setProjectionMatrix(uiCamera.combined);
+            batch.begin();
+            inventoryUI.renderBackdrop(batch, uiCamera.viewportWidth, uiCamera.viewportHeight);
+            batch.end();
+
+            shapeRenderer.setProjectionMatrix(uiCamera.combined);
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            renderInventoryPanel();
+            shapeRenderer.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
 
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
@@ -336,6 +367,11 @@ public class FirstScreen implements Screen {
         player.stopX();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            if (inventoryVisible) {
+                inventoryVisible = false;
+                cancelInventoryDrag();
+                return;
+            }
             pauseMenuVisible = !pauseMenuVisible;
             pausePanel = PausePanel.NONE;
             hoveredPauseButton = -1;
@@ -561,12 +597,17 @@ public class FirstScreen implements Screen {
     private Rectangle getHandSlotBounds(int slot) {
         float panelX = getInventoryPanelX();
         float panelY = getInventoryPanelY();
-        return new Rectangle(
-                panelX + 134f + slot * (INVENTORY_SLOT_SIZE + INVENTORY_SLOT_GAP),
-                panelY + 34f,
-                INVENTORY_SLOT_SIZE,
-                INVENTORY_SLOT_SIZE
-        );
+        switch (slot) {
+            case 0:
+                return new Rectangle(panelX + 247f, panelY + 566f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+            case 1:
+                return new Rectangle(panelX + 356f, panelY + 570f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+            case 2:
+                return new Rectangle(panelX + 246f, panelY + 488f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+            case 3:
+            default:
+                return new Rectangle(panelX + 329f, panelY + 488f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+        }
     }
 
     private Rectangle getBagSlotBounds(int slot) {
@@ -575,10 +616,10 @@ public class FirstScreen implements Screen {
         int col = slot % INVENTORY_BAG_COLUMNS;
         int row = slot / INVENTORY_BAG_COLUMNS;
         return new Rectangle(
-                panelX + 416f + col * (INVENTORY_SLOT_SIZE + INVENTORY_SLOT_GAP),
-                panelY + 256f - row * (INVENTORY_SLOT_SIZE + INVENTORY_SLOT_GAP),
-                INVENTORY_SLOT_SIZE,
-                INVENTORY_SLOT_SIZE
+                panelX + 86f + col * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP),
+                panelY + 252f - row * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP),
+                INVENTORY_BAG_SLOT_SIZE,
+                INVENTORY_BAG_SLOT_SIZE
         );
     }
 
@@ -2182,9 +2223,8 @@ public class FirstScreen implements Screen {
             return;
         }
         float panelX = getInventoryPanelX();
-        float panelY = getInventoryPanelY();
         int frameIndex = 8;
-        batch.draw(heroFrames[frameIndex], panelX + 76f, panelY + 134f, 174f, 174f);
+        batch.draw(heroFrames[frameIndex], panelX + 40f, getInventoryPanelY() + 478f, 180f, 180f);
     }
 
     private int getHeroFrameIndex() {
@@ -2388,10 +2428,6 @@ public class FirstScreen implements Screen {
             renderBossHealthBarPanel();
         }
 
-        if (inventoryVisible) {
-            renderInventoryPanel();
-        }
-
         if (dialogueVisible) {
             float pulse = 0.5f + 0.5f * MathUtils.sin(time * 5f);
             shapeRenderer.setColor(0.018f, 0.022f, 0.024f, 1f);
@@ -2527,19 +2563,6 @@ public class FirstScreen implements Screen {
         float panelX = getInventoryPanelX();
         float panelY = getInventoryPanelY();
 
-        shapeRenderer.setColor(0.004f, 0.006f, 0.008f, 0.62f);
-        shapeRenderer.rect(panelX - 14f, panelY - 14f, INVENTORY_PANEL_WIDTH + 28f, INVENTORY_PANEL_HEIGHT + 28f);
-        shapeRenderer.setColor(0.018f, 0.022f, 0.024f, 0.98f);
-        shapeRenderer.rect(panelX, panelY, INVENTORY_PANEL_WIDTH, INVENTORY_PANEL_HEIGHT);
-        shapeRenderer.setColor(0.42f, 0.54f, 0.49f, 1f);
-        shapeRenderer.rect(panelX, panelY + INVENTORY_PANEL_HEIGHT - 38f, INVENTORY_PANEL_WIDTH, 8f);
-        shapeRenderer.setColor(0.58f, 0.12f, 0.10f, 0.92f);
-        shapeRenderer.rect(panelX, panelY + 10f, INVENTORY_PANEL_WIDTH, 4f);
-        shapeRenderer.setColor(0.075f, 0.087f, 0.087f, 1f);
-        shapeRenderer.rect(panelX + 42f, panelY + 122f, 222f, 246f);
-        shapeRenderer.setColor(0.25f, 0.36f, 0.33f, 1f);
-        shapeRenderer.rect(panelX + 56f, panelY + 136f, 194f, 218f);
-
         for (int i = 0; i < InventorySystem.BAG_SLOT_COUNT; i++) {
             Rectangle slot = getBagSlotBounds(i);
             drawSlot(slot.x, slot.y, false, false);
@@ -2554,7 +2577,7 @@ public class FirstScreen implements Screen {
         for (int i = 0; i < handWeapons.length; i++) {
             if (handWeapons[i] != null) {
                 Rectangle slot = getHandSlotBounds(i);
-                drawWeaponIcon(handWeapons[i], slot.x + 8f, slot.y + 10f, 34f, true);
+                drawWeaponIcon(handWeapons[i], slot.x + 8f, slot.y + 10f, INVENTORY_HAND_SLOT_SIZE - 16f, true);
             }
         }
 
@@ -2562,8 +2585,13 @@ public class FirstScreen implements Screen {
         for (int i = 0; i < bagWeapons.length; i++) {
             if (bagWeapons[i] != null) {
                 Rectangle slot = getBagSlotBounds(i);
-                drawWeaponIcon(bagWeapons[i], slot.x + 8f, slot.y + 10f, 34f, false);
+                drawWeaponIcon(bagWeapons[i], slot.x + 10f, slot.y + 12f, INVENTORY_BAG_SLOT_SIZE - 20f, false);
             }
+        }
+
+        WeaponType selectedWeapon = inventorySystem.getSelectedWeapon();
+        if (selectedWeapon != null) {
+            drawWeaponIcon(selectedWeapon, panelX + 960f, panelY + 540f, 180f, true);
         }
 
         if (draggedWeapon != null) {
@@ -2574,18 +2602,19 @@ public class FirstScreen implements Screen {
     }
 
     private void drawSlot(float x, float y, boolean selected, boolean handSlot) {
+        float slotSize = handSlot ? INVENTORY_HAND_SLOT_SIZE : INVENTORY_BAG_SLOT_SIZE;
         if (selected) {
-            shapeRenderer.setColor(0.82f, 0.72f, 0.44f, 1f);
+            shapeRenderer.setColor(0.82f, 0.72f, 0.44f, 0.72f);
         } else if (handSlot) {
-            shapeRenderer.setColor(0.32f, 0.44f, 0.42f, 1f);
+            shapeRenderer.setColor(0.32f, 0.44f, 0.42f, 0.56f);
         } else {
-            shapeRenderer.setColor(0.055f, 0.065f, 0.065f, 1f);
+            shapeRenderer.setColor(0.055f, 0.065f, 0.065f, 0.58f);
         }
-        shapeRenderer.rect(x, y, INVENTORY_SLOT_SIZE, INVENTORY_SLOT_SIZE);
-        shapeRenderer.setColor(selected ? 0.18f : 0.15f, selected ? 0.16f : 0.18f, selected ? 0.10f : 0.17f, 1f);
-        shapeRenderer.rect(x + 5f, y + 5f, INVENTORY_SLOT_SIZE - 10f, INVENTORY_SLOT_SIZE - 10f);
-        shapeRenderer.setColor(0.88f, 0.95f, 0.88f, selected ? 0.34f : 0.12f);
-        shapeRenderer.rect(x + 6f, y + INVENTORY_SLOT_SIZE - 10f, INVENTORY_SLOT_SIZE - 12f, 3f);
+        shapeRenderer.rect(x, y, slotSize, slotSize);
+        shapeRenderer.setColor(selected ? 0.18f : 0.15f, selected ? 0.16f : 0.18f, selected ? 0.10f : 0.17f, 0.82f);
+        shapeRenderer.rect(x + 5f, y + 5f, slotSize - 10f, slotSize - 10f);
+        shapeRenderer.setColor(0.88f, 0.95f, 0.88f, selected ? 0.34f : 0.16f);
+        shapeRenderer.rect(x + 6f, y + slotSize - 10f, slotSize - 12f, 3f);
     }
 
     private void drawWeaponIcon(WeaponType weapon, float x, float y, float size, boolean bright) {
@@ -2732,6 +2761,9 @@ public class FirstScreen implements Screen {
         shapeRenderer.dispose();
         batch.dispose();
         font.dispose();
+        if (inventoryUI != null) {
+            inventoryUI.dispose();
+        }
         if (streetTexture != null) {
             streetTexture.dispose();
         }
