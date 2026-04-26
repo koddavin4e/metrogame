@@ -122,7 +122,7 @@ public class SaveSlotScreen implements Screen {
         if (mode == Mode.SAVE) {
             if (returnScreen instanceof FirstScreen) {
                 ((FirstScreen) returnScreen).saveToSlot(slot);
-                statusText = "РЎР»РѕС‚ " + (slot + 1) + " СЃРѕС…СЂР°РЅРµРЅ.";
+                statusText = "\u0421\u043b\u043e\u0442 " + (slot + 1) + " \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d.";
             }
             return;
         }
@@ -130,7 +130,7 @@ public class SaveSlotScreen implements Screen {
         if (FirstScreen.hasSave(slot)) {
             game.setScreen(new FirstScreen(game, slot));
         } else {
-            statusText = "Р­С‚РѕС‚ СЃР»РѕС‚ РїСѓСЃС‚.";
+            statusText = "\u042d\u0442\u043e\u0442 \u0441\u043b\u043e\u0442 \u043f\u0443\u0441\u0442.";
         }
     }
 
@@ -176,12 +176,12 @@ public class SaveSlotScreen implements Screen {
 
     private void renderText() {
         titleFont.setColor(0.96f, 0.90f, 0.82f, 1f);
-        drawCentered(titleFont, mode == Mode.SAVE ? "РЎРѕС…СЂР°РЅРµРЅРёРµ" : "Р—Р°РіСЂСѓР·РєР°", camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f + 210f);
+        drawCentered(titleFont, mode == Mode.SAVE ? "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435" : "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430", camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f + 210f);
 
         for (int i = 0; i < slotBounds.length; i++) {
             Rectangle bounds = slotBounds[i];
             textFont.setColor(i == hoveredSlot ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
-            textFont.draw(batch, "РЎР»РѕС‚ " + (i + 1), bounds.x + 32f, bounds.y + 40f);
+            textFont.draw(batch, "\u0421\u043b\u043e\u0442 " + (i + 1), bounds.x + 32f, bounds.y + 40f);
             textFont.setColor(new Color(0.70f, 0.78f, 0.74f, 1f));
             textFont.draw(batch, FirstScreen.getSaveSummary(i), bounds.x + 170f, bounds.y + 40f);
         }
@@ -190,7 +190,7 @@ public class SaveSlotScreen implements Screen {
         drawCentered(textFont, statusText, camera.viewportWidth * 0.5f, camera.viewportHeight * 0.5f - 146f);
 
         textFont.setColor(hoveredBackButton ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
-        drawCentered(textFont, "РќР°Р·Р°Рґ", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
+        drawCentered(textFont, "\u041d\u0430\u0437\u0430\u0434", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
     }
 
     private void drawCentered(BitmapFont font, String text, float centerX, float y) {
@@ -203,9 +203,9 @@ public class SaveSlotScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = size;
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
-                + "РђР‘Р’Р“Р”Р•РЃР–Р—РР™РљР›РњРќРћРџР РЎРўРЈР¤РҐР¦Р§РЁР©РЄР«Р¬Р­Р®РЇ"
-                + "Р°Р±РІРіРґРµС‘Р¶Р·РёР№РєР»РјРЅРѕРїСЂСЃС‚СѓС„С…С†С‡С€С‰СЉС‹СЊСЌСЋСЏ"
-                + "В«В»в„–вЂ¦.,!?-:()|/";
+                + "\u0410\u0411\u0412\u0413\u0414\u0415\u0401\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f"
+                + "\u0430\u0431\u0432\u0433\u0434\u0435\u0451\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f"
+                + "\u00ab\u00bb\u2116\u2026.,!?-:()|/";
         BitmapFont font = generator.generateFont(parameter);
         generator.dispose();
         return font;

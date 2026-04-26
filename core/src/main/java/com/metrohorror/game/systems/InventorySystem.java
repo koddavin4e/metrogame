@@ -8,7 +8,7 @@ import com.metrohorror.game.entities.WeaponType;
 
 public class InventorySystem {
     public static final int WEAPON_SLOT_COUNT = 4;
-    public static final int BAG_SLOT_COUNT = 12;
+    public static final int BAG_SLOT_COUNT = 24;
 
     private final Map<String, Integer> items = new LinkedHashMap<>();
     private final WeaponType[] weaponSlots = new WeaponType[WEAPON_SLOT_COUNT];

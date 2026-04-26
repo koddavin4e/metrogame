@@ -226,12 +226,12 @@ public class MenuSectionScreen implements Screen {
             renderSettingsText();
         } else {
             textFont.setColor(0.70f, 0.78f, 0.74f, 1f);
-            drawCentered(textFont, "Р—РґРµСЃСЊ РїРѕР·Р¶Рµ РїРѕСЏРІРёС‚СЃСЏ СЃРїРёСЃРѕРє РґРѕСЃС‚РёР¶РµРЅРёР№.", centerX, centerY);
-            drawCentered(textFont, "РќР°Р¶РјРёС‚Рµ Escape РёР»Рё РєРЅРѕРїРєСѓ РЅРёР¶Рµ, С‡С‚РѕР±С‹ РІРµСЂРЅСѓС‚СЊСЃСЏ.", centerX, centerY - 44f);
+            drawCentered(textFont, "\u0417\u0434\u0435\u0441\u044c \u043f\u043e\u0437\u0436\u0435 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0441\u043f\u0438\u0441\u043e\u043a \u0434\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u0439.", centerX, centerY);
+            drawCentered(textFont, "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 Escape \u0438\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 \u043d\u0438\u0436\u0435, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f.", centerX, centerY - 44f);
         }
 
         textFont.setColor(hoveredBackButton ? Color.WHITE : new Color(0.86f, 0.90f, 0.86f, 1f));
-        drawCentered(textFont, "РќР°Р·Р°Рґ", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
+        drawCentered(textFont, "\u041d\u0430\u0437\u0430\u0434", BACK_BUTTON.x + BACK_BUTTON.width * 0.5f, BACK_BUTTON.y + 36f);
     }
 
     private void renderSettingsText() {
@@ -239,22 +239,22 @@ public class MenuSectionScreen implements Screen {
         float centerY = camera.viewportHeight * 0.5f;
 
         textFont.setColor(0.86f, 0.90f, 0.86f, 1f);
-        textFont.draw(batch, "Р“СЂРѕРјРєРѕСЃС‚СЊ", centerX - 220f, centerY + 44f);
+        textFont.draw(batch, "\u0413\u0440\u043e\u043c\u043a\u043e\u0441\u0442\u044c", centerX - 220f, centerY + 44f);
         textFont.draw(batch, Math.round(volume * 100f) + "%", centerX + 250f, centerY + 44f);
-        textFont.draw(batch, "РњСѓР·С‹РєР°", centerX - 220f, centerY - 16f);
-        textFont.draw(batch, musicEnabled ? "Р’РєР»СЋС‡РµРЅР°" : "Р’С‹РєР»СЋС‡РµРЅР°", centerX - 80f, centerY - 16f);
-        textFont.draw(batch, "РџРѕР»РЅС‹Р№ СЌРєСЂР°РЅ", centerX - 220f, centerY - 80f);
-        textFont.draw(batch, fullscreenEnabled ? "Р’РєР»СЋС‡РµРЅ" : "Р’С‹РєР»СЋС‡РµРЅ", centerX - 20f, centerY - 80f);
+        textFont.draw(batch, "\u041c\u0443\u0437\u044b\u043a\u0430", centerX - 220f, centerY - 16f);
+        textFont.draw(batch, musicEnabled ? "\u0412\u043a\u043b\u044e\u0447\u0435\u043d\u0430" : "\u0412\u044b\u043a\u043b\u044e\u0447\u0435\u043d\u0430", centerX - 80f, centerY - 16f);
+        textFont.draw(batch, "\u041f\u043e\u043b\u043d\u044b\u0439 \u044d\u043a\u0440\u0430\u043d", centerX - 220f, centerY - 80f);
+        textFont.draw(batch, fullscreenEnabled ? "\u0412\u043a\u043b\u044e\u0447\u0435\u043d" : "\u0412\u044b\u043a\u043b\u044e\u0447\u0435\u043d", centerX - 20f, centerY - 80f);
 
         textFont.setColor(0.70f, 0.78f, 0.74f, 1f);
-        drawCentered(textFont, "РќР°Р¶РјРёС‚Рµ Escape РёР»Рё РєРЅРѕРїРєСѓ РЅРёР¶Рµ, С‡С‚РѕР±С‹ РІРµСЂРЅСѓС‚СЊСЃСЏ.", centerX, centerY - 132f);
+        drawCentered(textFont, "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 Escape \u0438\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 \u043d\u0438\u0436\u0435, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f.", centerX, centerY - 132f);
     }
 
     private String getTitle() {
         if (section == Section.ACHIEVEMENTS) {
-            return "Р”РѕСЃС‚РёР¶РµРЅРёСЏ";
+            return "\u0414\u043e\u0441\u0442\u0438\u0436\u0435\u043d\u0438\u044f";
         }
-        return "РќР°СЃС‚СЂРѕР№РєРё";
+        return "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438";
     }
 
     private boolean isSettingsScreen() {
@@ -318,9 +318,9 @@ public class MenuSectionScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = size;
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS
-                + "РђР‘Р’Р“Р”Р•РЃР–Р—РР™РљР›РњРќРћРџР РЎРўРЈР¤РҐР¦Р§РЁР©РЄР«Р¬Р­Р®РЇ"
-                + "Р°Р±РІРіРґРµС‘Р¶Р·РёР№РєР»РјРЅРѕРїСЂСЃС‚СѓС„С…С†С‡С€С‰СЉС‹СЊСЌСЋСЏ"
-                + "В«В»в„–вЂ¦.,!?-:()";
+                + "\u0410\u0411\u0412\u0413\u0414\u0415\u0401\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f"
+                + "\u0430\u0431\u0432\u0433\u0434\u0435\u0451\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f"
+                + "\u00ab\u00bb\u2116\u2026.,!?-:()|/";
         BitmapFont font = generator.generateFont(parameter);
         generator.dispose();
         return font;

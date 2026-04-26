@@ -101,10 +101,17 @@ public class FirstScreen implements Screen {
     private static final float PAUSE_BUTTON_GAP = 14f;
     private static final float INVENTORY_PANEL_WIDTH = 1300f;
     private static final float INVENTORY_PANEL_HEIGHT = 800f;
-    private static final float INVENTORY_HAND_SLOT_SIZE = 58f;
-    private static final float INVENTORY_BAG_SLOT_SIZE = 72f;
-    private static final float INVENTORY_BAG_SLOT_GAP = 22f;
-    private static final int INVENTORY_BAG_COLUMNS = 4;
+    private static final float INVENTORY_WEAPON_SLOT_WIDTH = 84f;
+    private static final float INVENTORY_WEAPON_SLOT_HEIGHT = 126f;
+    private static final float INVENTORY_UTILITY_SLOT_SIZE = 84f;
+    private static final float INVENTORY_BAG_SLOT_SIZE = 78f;
+    private static final float INVENTORY_BAG_SLOT_GAP_X = 14f;
+    private static final float INVENTORY_BAG_SLOT_GAP_Y = 14f;
+    private static final int INVENTORY_BAG_COLUMNS = 6;
+    private static final float INVENTORY_CHARACTER_LEFT = 54f;
+    private static final float INVENTORY_CHARACTER_BOTTOM = 324f;
+    private static final float INVENTORY_CHARACTER_WIDTH = 196f;
+    private static final float INVENTORY_CHARACTER_HEIGHT = 318f;
     private static final int HERO_FRAME_SIZE = 128;
     private static final int HERO_FRAME_COUNT = 17;
     private static final float HERO_BODY_DRAW_WIDTH = 88f;
@@ -597,38 +604,44 @@ public class FirstScreen implements Screen {
     private Rectangle getHandSlotBounds(int slot) {
         float panelX = getInventoryPanelX();
         float panelY = getInventoryPanelY();
+        float scale = getInventoryPanelScale();
         switch (slot) {
             case 0:
-                return new Rectangle(panelX + 247f, panelY + 566f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+                return new Rectangle(panelX + 288f * scale, panelY + 494f * scale, INVENTORY_WEAPON_SLOT_WIDTH * scale, INVENTORY_WEAPON_SLOT_HEIGHT * scale);
             case 1:
-                return new Rectangle(panelX + 356f, panelY + 570f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+                return new Rectangle(panelX + 415f * scale, panelY + 494f * scale, INVENTORY_WEAPON_SLOT_WIDTH * scale, INVENTORY_WEAPON_SLOT_HEIGHT * scale);
             case 2:
-                return new Rectangle(panelX + 246f, panelY + 488f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+                return new Rectangle(panelX + 269f * scale, panelY + 341f * scale, INVENTORY_UTILITY_SLOT_SIZE * scale, INVENTORY_UTILITY_SLOT_SIZE * scale);
             case 3:
             default:
-                return new Rectangle(panelX + 329f, panelY + 488f, INVENTORY_HAND_SLOT_SIZE, INVENTORY_HAND_SLOT_SIZE);
+                return new Rectangle(panelX + 362f * scale, panelY + 341f * scale, INVENTORY_UTILITY_SLOT_SIZE * scale, INVENTORY_UTILITY_SLOT_SIZE * scale);
         }
     }
 
     private Rectangle getBagSlotBounds(int slot) {
         float panelX = getInventoryPanelX();
         float panelY = getInventoryPanelY();
+        float scale = getInventoryPanelScale();
         int col = slot % INVENTORY_BAG_COLUMNS;
         int row = slot / INVENTORY_BAG_COLUMNS;
         return new Rectangle(
-                panelX + 86f + col * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP),
-                panelY + 252f - row * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP),
-                INVENTORY_BAG_SLOT_SIZE,
-                INVENTORY_BAG_SLOT_SIZE
+                panelX + (584f + col * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP_X)) * scale,
+                panelY + (537f - row * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP_Y)) * scale,
+                INVENTORY_BAG_SLOT_SIZE * scale,
+                INVENTORY_BAG_SLOT_SIZE * scale
         );
     }
 
     private float getInventoryPanelX() {
-        return uiCamera.viewportWidth / 2f - INVENTORY_PANEL_WIDTH / 2f;
+        return uiCamera.viewportWidth / 2f - INVENTORY_PANEL_WIDTH * getInventoryPanelScale() / 2f;
     }
 
     private float getInventoryPanelY() {
-        return uiCamera.viewportHeight / 2f - INVENTORY_PANEL_HEIGHT / 2f;
+        return uiCamera.viewportHeight / 2f - INVENTORY_PANEL_HEIGHT * getInventoryPanelScale() / 2f;
+    }
+
+    private float getInventoryPanelScale() {
+        return 1f;
     }
 
     private void updateDoorLock() {
@@ -1770,7 +1783,7 @@ public class FirstScreen implements Screen {
 
     private void loadHeroSpriteSheet() {
         heroTexture = new Texture(Gdx.files.internal("player/hero_sheet.png"));
-        heroTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        heroTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         heroFrames = new TextureRegion[HERO_FRAME_COUNT];
         for (int i = 0; i < heroFrames.length; i++) {
             heroFrames[i] = new TextureRegion(heroTexture, i * HERO_FRAME_SIZE, 0, HERO_FRAME_SIZE, HERO_FRAME_SIZE);
@@ -2222,9 +2235,33 @@ public class FirstScreen implements Screen {
         if (!inventoryVisible || heroFrames == null || heroFrames.length == 0) {
             return;
         }
+
+        float scale = getInventoryPanelScale();
         float panelX = getInventoryPanelX();
-        int frameIndex = 8;
-        batch.draw(heroFrames[frameIndex], panelX + 40f, getInventoryPanelY() + 478f, 180f, 180f);
+        float panelY = getInventoryPanelY();
+        float areaX = panelX + INVENTORY_CHARACTER_LEFT * scale;
+        float areaY = panelY + INVENTORY_CHARACTER_BOTTOM * scale;
+        float areaWidth = INVENTORY_CHARACTER_WIDTH * scale;
+        float areaHeight = INVENTORY_CHARACTER_HEIGHT * scale;
+
+        int frameIndex = inventorySystem.getSelectedWeapon() != null ? 8 : 1;
+        TextureRegion frame = heroFrames[frameIndex];
+        boolean flip = player.isFacingRight();
+
+        float drawHeight = areaHeight * 0.86f;
+        float drawWidth = drawHeight * (frame.getRegionWidth() / (float) frame.getRegionHeight());
+        float maxWidth = areaWidth * 0.78f;
+        if (drawWidth > maxWidth) {
+            float fitScale = maxWidth / drawWidth;
+            drawWidth *= fitScale;
+            drawHeight *= fitScale;
+        }
+
+        float drawX = areaX + areaWidth * 0.5f - drawWidth * 0.5f;
+        float drawY = areaY + areaHeight * 0.06f;
+        batch.setColor(1f, 1f, 1f, 0.96f);
+        batch.draw(frame, flip ? drawX + drawWidth : drawX, drawY, flip ? -drawWidth : drawWidth, drawHeight);
+        batch.setColor(Color.WHITE);
     }
 
     private int getHeroFrameIndex() {
@@ -2560,24 +2597,14 @@ public class FirstScreen implements Screen {
     }
 
     private void renderInventoryPanel() {
-        float panelX = getInventoryPanelX();
-        float panelY = getInventoryPanelY();
-
-        for (int i = 0; i < InventorySystem.BAG_SLOT_COUNT; i++) {
-            Rectangle slot = getBagSlotBounds(i);
-            drawSlot(slot.x, slot.y, false, false);
-        }
-
-        for (int i = 0; i < InventorySystem.WEAPON_SLOT_COUNT; i++) {
-            Rectangle slot = getHandSlotBounds(i);
-            drawSlot(slot.x, slot.y, i == inventorySystem.getSelectedWeaponSlot(), true);
-        }
-
         WeaponType[] handWeapons = inventorySystem.getWeaponSlots();
         for (int i = 0; i < handWeapons.length; i++) {
             if (handWeapons[i] != null) {
                 Rectangle slot = getHandSlotBounds(i);
-                drawWeaponIcon(handWeapons[i], slot.x + 8f, slot.y + 10f, INVENTORY_HAND_SLOT_SIZE - 16f, true);
+                float iconSize = Math.min(slot.width, slot.height) * 0.74f;
+                float iconX = slot.x + (slot.width - iconSize) * 0.5f;
+                float iconY = slot.y + (slot.height - iconSize) * 0.5f;
+                drawWeaponIcon(handWeapons[i], iconX, iconY, iconSize, true);
             }
         }
 
@@ -2585,36 +2612,18 @@ public class FirstScreen implements Screen {
         for (int i = 0; i < bagWeapons.length; i++) {
             if (bagWeapons[i] != null) {
                 Rectangle slot = getBagSlotBounds(i);
-                drawWeaponIcon(bagWeapons[i], slot.x + 10f, slot.y + 12f, INVENTORY_BAG_SLOT_SIZE - 20f, false);
+                float iconSize = slot.width * 0.68f;
+                float iconX = slot.x + (slot.width - iconSize) * 0.5f;
+                float iconY = slot.y + (slot.height - iconSize) * 0.5f;
+                drawWeaponIcon(bagWeapons[i], iconX, iconY, iconSize, false);
             }
-        }
-
-        WeaponType selectedWeapon = inventorySystem.getSelectedWeapon();
-        if (selectedWeapon != null) {
-            drawWeaponIcon(selectedWeapon, panelX + 960f, panelY + 540f, 180f, true);
         }
 
         if (draggedWeapon != null) {
             pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
             hudViewport.unproject(pointer);
-            drawWeaponIcon(draggedWeapon, pointer.x - 18f, pointer.y - 18f, 38f, true);
+            drawWeaponIcon(draggedWeapon, pointer.x - 24f, pointer.y - 24f, 48f, true);
         }
-    }
-
-    private void drawSlot(float x, float y, boolean selected, boolean handSlot) {
-        float slotSize = handSlot ? INVENTORY_HAND_SLOT_SIZE : INVENTORY_BAG_SLOT_SIZE;
-        if (selected) {
-            shapeRenderer.setColor(0.82f, 0.72f, 0.44f, 0.72f);
-        } else if (handSlot) {
-            shapeRenderer.setColor(0.32f, 0.44f, 0.42f, 0.56f);
-        } else {
-            shapeRenderer.setColor(0.055f, 0.065f, 0.065f, 0.58f);
-        }
-        shapeRenderer.rect(x, y, slotSize, slotSize);
-        shapeRenderer.setColor(selected ? 0.18f : 0.15f, selected ? 0.16f : 0.18f, selected ? 0.10f : 0.17f, 0.82f);
-        shapeRenderer.rect(x + 5f, y + 5f, slotSize - 10f, slotSize - 10f);
-        shapeRenderer.setColor(0.88f, 0.95f, 0.88f, selected ? 0.34f : 0.16f);
-        shapeRenderer.rect(x + 6f, y + slotSize - 10f, slotSize - 12f, 3f);
     }
 
     private void drawWeaponIcon(WeaponType weapon, float x, float y, float size, boolean bright) {
