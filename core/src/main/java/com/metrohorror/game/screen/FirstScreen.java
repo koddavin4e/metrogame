@@ -35,6 +35,9 @@ import com.metrohorror.game.world.DungeonMap;
 import com.metrohorror.game.world.GameMap;
 import com.metrohorror.game.world.Platform;
 
+import java.util.EnumMap;
+import java.util.EnumSet;
+
 public class FirstScreen implements Screen {
     private static final float VIRTUAL_WIDTH = 1280f;
     private static final float VIRTUAL_HEIGHT = 720f;
@@ -104,9 +107,13 @@ public class FirstScreen implements Screen {
     private static final float INVENTORY_WEAPON_SLOT_WIDTH = 84f;
     private static final float INVENTORY_WEAPON_SLOT_HEIGHT = 126f;
     private static final float INVENTORY_UTILITY_SLOT_SIZE = 84f;
-    private static final float INVENTORY_BAG_SLOT_SIZE = 78f;
-    private static final float INVENTORY_BAG_SLOT_GAP_X = 14f;
-    private static final float INVENTORY_BAG_SLOT_GAP_Y = 14f;
+    private static final int INVENTORY_EQUIPPED_WEAPON_SLOT_COUNT = 2;
+    private static final float INVENTORY_BAG_SLOT_WIDTH = 86f;
+    private static final float INVENTORY_BAG_SLOT_HEIGHT = 78f;
+    private static final float INVENTORY_BAG_SLOT_GAP_X = 16f;
+    private static final float INVENTORY_BAG_SLOT_GAP_Y = 15f;
+    private static final float INVENTORY_BAG_START_X = 580f;
+    private static final float INVENTORY_BAG_TOP_ROW_BOTTOM_Y = 589f;
     private static final int INVENTORY_BAG_COLUMNS = 6;
     private static final float INVENTORY_CHARACTER_LEFT = 54f;
     private static final float INVENTORY_CHARACTER_BOTTOM = 324f;
@@ -140,6 +147,8 @@ public class FirstScreen implements Screen {
     private Texture hallwayTexture;
     private Texture streetTexture;
     private Texture bossTexture;
+    private final EnumMap<WeaponType, Texture> weaponIconTextures = new EnumMap<WeaponType, Texture>(WeaponType.class);
+    private final EnumSet<WeaponType> missingWeaponIconTextures = EnumSet.noneOf(WeaponType.class);
     private TextureRegion[] heroFrames;
     private final MetroHorrorGame game;
     private final int loadSlot;
@@ -305,13 +314,14 @@ public class FirstScreen implements Screen {
             batch.setProjectionMatrix(uiCamera.combined);
             batch.begin();
             inventoryUI.renderBackdrop(batch, uiCamera.viewportWidth, uiCamera.viewportHeight);
+            renderInventoryPanelTextures();
             batch.end();
 
             shapeRenderer.setProjectionMatrix(uiCamera.combined);
             Gdx.gl.glEnable(GL20.GL_BLEND);
             Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            renderInventoryPanel();
+            renderInventoryPanelFallback();
             shapeRenderer.end();
             Gdx.gl.glDisable(GL20.GL_BLEND);
         }
@@ -483,10 +493,6 @@ public class FirstScreen implements Screen {
             inventorySystem.selectWeaponSlot(0);
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
             inventorySystem.selectWeaponSlot(1);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
-            inventorySystem.selectWeaponSlot(2);
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_4)) {
-            inventorySystem.selectWeaponSlot(3);
         }
 
     }
@@ -584,7 +590,7 @@ public class FirstScreen implements Screen {
     }
 
     private int getHandSlotAt(float x, float y) {
-        for (int i = 0; i < InventorySystem.WEAPON_SLOT_COUNT; i++) {
+        for (int i = 0; i < INVENTORY_EQUIPPED_WEAPON_SLOT_COUNT; i++) {
             if (getHandSlotBounds(i).contains(x, y)) {
                 return i;
             }
@@ -625,10 +631,10 @@ public class FirstScreen implements Screen {
         int col = slot % INVENTORY_BAG_COLUMNS;
         int row = slot / INVENTORY_BAG_COLUMNS;
         return new Rectangle(
-                panelX + (584f + col * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP_X)) * scale,
-                panelY + (537f - row * (INVENTORY_BAG_SLOT_SIZE + INVENTORY_BAG_SLOT_GAP_Y)) * scale,
-                INVENTORY_BAG_SLOT_SIZE * scale,
-                INVENTORY_BAG_SLOT_SIZE * scale
+                panelX + (INVENTORY_BAG_START_X + col * (INVENTORY_BAG_SLOT_WIDTH + INVENTORY_BAG_SLOT_GAP_X)) * scale,
+                panelY + (INVENTORY_BAG_TOP_ROW_BOTTOM_Y - row * (INVENTORY_BAG_SLOT_HEIGHT + INVENTORY_BAG_SLOT_GAP_Y)) * scale,
+                INVENTORY_BAG_SLOT_WIDTH * scale,
+                INVENTORY_BAG_SLOT_HEIGHT * scale
         );
     }
 
@@ -2351,7 +2357,7 @@ public class FirstScreen implements Screen {
         String place = LocationId.fromIndex(locationIndex).getDisplayName();
         font.draw(batch, place, 22, uiCamera.viewportHeight - 18f);
         font.draw(batch, "A/D \u0445\u043e\u0434\u044c\u0431\u0430 | SPACE \u043f\u0440\u044b\u0436\u043e\u043a | E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 | TAB \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c", 22, uiCamera.viewportHeight - 44f);
-        font.draw(batch, "W/S + \u041b\u041a\u041c: \u0443\u0434\u0430\u0440 \u0432\u0432\u0435\u0440\u0445/\u0432\u043d\u0438\u0437 | 1-4: \u043f\u0440\u0435\u0434\u043c\u0435\u0442 \u0432 \u0440\u0443\u043a\u0430\u0445", 22, uiCamera.viewportHeight - 70f);
+        font.draw(batch, "W/S + \u041b\u041a\u041c: \u0443\u0434\u0430\u0440 \u0432\u0432\u0435\u0440\u0445/\u0432\u043d\u0438\u0437 | 1-2: \u043e\u0440\u0443\u0436\u0438\u0435 \u0432 \u0440\u0443\u043a\u0430\u0445", 22, uiCamera.viewportHeight - 70f);
         WeaponType selectedWeapon = inventorySystem.getSelectedWeapon();
         if (selectedWeapon != null) {
             font.draw(batch, "\u0412 \u0440\u0443\u043a\u0430\u0445: " + selectedWeapon.getDisplayName() + " | \u041b\u041a\u041c: \u0443\u0434\u0430\u0440", 22, uiCamera.viewportHeight - 96f);
@@ -2596,7 +2602,7 @@ public class FirstScreen implements Screen {
         return PAUSE_BUTTON_LABELS[index];
     }
 
-    private void renderInventoryPanel() {
+    private void renderInventoryPanelTextures() {
         WeaponType[] handWeapons = inventorySystem.getWeaponSlots();
         for (int i = 0; i < handWeapons.length; i++) {
             if (handWeapons[i] != null) {
@@ -2604,7 +2610,7 @@ public class FirstScreen implements Screen {
                 float iconSize = Math.min(slot.width, slot.height) * 0.74f;
                 float iconX = slot.x + (slot.width - iconSize) * 0.5f;
                 float iconY = slot.y + (slot.height - iconSize) * 0.5f;
-                drawWeaponIcon(handWeapons[i], iconX, iconY, iconSize, true);
+                drawWeaponTextureIcon(handWeapons[i], iconX, iconY, iconSize);
             }
         }
 
@@ -2615,25 +2621,180 @@ public class FirstScreen implements Screen {
                 float iconSize = slot.width * 0.68f;
                 float iconX = slot.x + (slot.width - iconSize) * 0.5f;
                 float iconY = slot.y + (slot.height - iconSize) * 0.5f;
-                drawWeaponIcon(bagWeapons[i], iconX, iconY, iconSize, false);
+                drawWeaponTextureIcon(bagWeapons[i], iconX, iconY, iconSize);
             }
         }
 
         if (draggedWeapon != null) {
             pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
             hudViewport.unproject(pointer);
+            drawWeaponTextureIcon(draggedWeapon, pointer.x - 24f, pointer.y - 24f, 48f);
+        }
+    }
+
+    private void renderInventoryPanelFallback() {
+        WeaponType[] handWeapons = inventorySystem.getWeaponSlots();
+        for (int i = 0; i < handWeapons.length; i++) {
+            if (handWeapons[i] != null && getWeaponIconTexture(handWeapons[i]) == null) {
+                Rectangle slot = getHandSlotBounds(i);
+                float iconSize = Math.min(slot.width, slot.height) * 0.74f;
+                float iconX = slot.x + (slot.width - iconSize) * 0.5f;
+                float iconY = slot.y + (slot.height - iconSize) * 0.5f;
+                drawWeaponIcon(handWeapons[i], iconX, iconY, iconSize, true);
+            }
+        }
+
+        WeaponType[] bagWeapons = inventorySystem.getBagSlots();
+        for (int i = 0; i < bagWeapons.length; i++) {
+            if (bagWeapons[i] != null && getWeaponIconTexture(bagWeapons[i]) == null) {
+                Rectangle slot = getBagSlotBounds(i);
+                float iconSize = slot.width * 0.68f;
+                float iconX = slot.x + (slot.width - iconSize) * 0.5f;
+                float iconY = slot.y + (slot.height - iconSize) * 0.5f;
+                drawWeaponIcon(bagWeapons[i], iconX, iconY, iconSize, false);
+            }
+        }
+
+        if (draggedWeapon != null && getWeaponIconTexture(draggedWeapon) == null) {
+            pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
+            hudViewport.unproject(pointer);
             drawWeaponIcon(draggedWeapon, pointer.x - 24f, pointer.y - 24f, 48f, true);
         }
     }
 
+    private void drawWeaponTextureIcon(WeaponType weapon, float x, float y, float size) {
+        Texture texture = getWeaponIconTexture(weapon);
+        if (texture == null) {
+            return;
+        }
+
+        float sourceX = 0f;
+        float sourceY = 0f;
+        float sourceWidth = texture.getWidth();
+        float sourceHeight = texture.getHeight();
+        float drawScale = 0.92f;
+        float offsetX = 0f;
+        float offsetY = 0f;
+        float rotation = 0f;
+
+        if (weapon == WeaponType.BASIC_KNIFE) {
+            // Center the visible knife sprite exactly inside the slot and let it nearly fill the cell.
+            sourceX = 10f;
+            sourceY = 8f;
+            sourceWidth = 44f;
+            sourceHeight = 48f;
+            drawScale = 0.96f;
+            offsetX = 0f;
+            offsetY = 0f;
+            rotation = 0f;
+        }
+
+        float drawBoxSize = size * drawScale;
+        float scale = Math.min(drawBoxSize / sourceWidth, drawBoxSize / sourceHeight);
+        float drawWidth = sourceWidth * scale;
+        float drawHeight = sourceHeight * scale;
+        float drawX = x + (size - drawWidth) * 0.5f + offsetX;
+        float drawY = y + (size - drawHeight) * 0.5f + offsetY;
+        batch.setColor(Color.WHITE);
+        batch.draw(texture,
+                drawX,
+                drawY,
+                drawWidth * 0.5f,
+                drawHeight * 0.5f,
+                drawWidth,
+                drawHeight,
+                1f,
+                1f,
+                rotation,
+                (int) sourceX,
+                (int) sourceY,
+                (int) sourceWidth,
+                (int) sourceHeight,
+                false,
+                false);
+    }
+
+    private Texture getWeaponIconTexture(WeaponType weapon) {
+        if (weapon == null || missingWeaponIconTextures.contains(weapon)) {
+            return null;
+        }
+
+        Texture texture = weaponIconTextures.get(weapon);
+        if (texture != null) {
+            return texture;
+        }
+
+        if (!Gdx.files.internal(weapon.getIconAssetPath()).exists()) {
+            missingWeaponIconTextures.add(weapon);
+            return null;
+        }
+
+        texture = new Texture(Gdx.files.internal(weapon.getIconAssetPath()));
+        weaponIconTextures.put(weapon, texture);
+        return texture;
+    }
+
     private void drawWeaponIcon(WeaponType weapon, float x, float y, float size, boolean bright) {
         float glow = bright ? 1f : 0.72f;
-        shapeRenderer.setColor(weapon.getColorR() * glow, weapon.getColorG() * glow, weapon.getColorB() * glow, 1f);
-        shapeRenderer.rectLine(x + 7f, y + 6f, x + size - 5f, y + size - 8f, 5f);
-        shapeRenderer.setColor(0.16f, 0.10f, 0.08f, 1f);
-        shapeRenderer.rectLine(x + 2f, y + 3f, x + 12f, y + 13f, 6f);
-        shapeRenderer.setColor(0.94f, 0.96f, 0.88f, 0.86f);
-        shapeRenderer.circle(x + size - 5f, y + size - 8f, 3f, 10);
+        float bladeR = weapon.getColorR() * glow;
+        float bladeG = weapon.getColorG() * glow;
+        float bladeB = weapon.getColorB() * glow;
+        float handleR = 0.16f;
+        float handleG = 0.10f;
+        float handleB = 0.08f;
+        float accentAlpha = bright ? 0.86f : 0.62f;
+
+        switch (weapon) {
+            case BASIC_KNIFE:
+                shapeRenderer.setColor(handleR, handleG, handleB, 1f);
+                shapeRenderer.rectLine(x + size * 0.16f, y + size * 0.18f, x + size * 0.34f, y + size * 0.34f, size * 0.15f);
+                shapeRenderer.setColor(bladeR, bladeG, bladeB, 1f);
+                shapeRenderer.rectLine(x + size * 0.30f, y + size * 0.30f, x + size * 0.74f, y + size * 0.78f, size * 0.10f);
+                shapeRenderer.setColor(0.94f, 0.96f, 0.88f, accentAlpha);
+                shapeRenderer.rectLine(x + size * 0.40f, y + size * 0.40f, x + size * 0.67f, y + size * 0.70f, size * 0.028f);
+                break;
+            case RUSTY_SWORD:
+            case IRON_SWORD:
+                shapeRenderer.setColor(handleR, handleG, handleB, 1f);
+                shapeRenderer.rectLine(x + size * 0.18f, y + size * 0.18f, x + size * 0.34f, y + size * 0.34f, size * 0.11f);
+                shapeRenderer.rectLine(x + size * 0.24f, y + size * 0.27f, x + size * 0.42f, y + size * 0.21f, size * 0.08f);
+                shapeRenderer.setColor(bladeR, bladeG, bladeB, 1f);
+                shapeRenderer.rectLine(x + size * 0.32f, y + size * 0.32f, x + size * 0.79f, y + size * 0.80f,
+                        weapon == WeaponType.IRON_SWORD ? size * 0.14f : size * 0.12f);
+                shapeRenderer.setColor(0.94f, 0.96f, 0.88f, accentAlpha);
+                shapeRenderer.rectLine(x + size * 0.40f, y + size * 0.40f, x + size * 0.72f, y + size * 0.72f, size * 0.035f);
+                break;
+            case HEAVY_AXE:
+                shapeRenderer.setColor(handleR, handleG, handleB, 1f);
+                shapeRenderer.rectLine(x + size * 0.24f, y + size * 0.16f, x + size * 0.70f, y + size * 0.72f, size * 0.10f);
+                shapeRenderer.setColor(bladeR, bladeG, bladeB, 1f);
+                shapeRenderer.triangle(
+                        x + size * 0.50f, y + size * 0.58f,
+                        x + size * 0.86f, y + size * 0.84f,
+                        x + size * 0.66f, y + size * 0.42f);
+                shapeRenderer.setColor(0.94f, 0.96f, 0.88f, accentAlpha);
+                shapeRenderer.rectLine(x + size * 0.61f, y + size * 0.61f, x + size * 0.76f, y + size * 0.72f, size * 0.03f);
+                break;
+            case SPEAR:
+                shapeRenderer.setColor(handleR * 1.15f, handleG * 1.15f, handleB * 1.15f, 1f);
+                shapeRenderer.rectLine(x + size * 0.16f, y + size * 0.20f, x + size * 0.78f, y + size * 0.82f, size * 0.065f);
+                shapeRenderer.setColor(bladeR, bladeG, bladeB, 1f);
+                shapeRenderer.triangle(
+                        x + size * 0.68f, y + size * 0.72f,
+                        x + size * 0.90f, y + size * 0.92f,
+                        x + size * 0.78f, y + size * 0.60f);
+                shapeRenderer.setColor(0.94f, 0.96f, 0.88f, accentAlpha);
+                shapeRenderer.rectLine(x + size * 0.72f, y + size * 0.74f, x + size * 0.84f, y + size * 0.84f, size * 0.026f);
+                break;
+            default:
+                shapeRenderer.setColor(bladeR, bladeG, bladeB, 1f);
+                shapeRenderer.rectLine(x + 7f, y + 6f, x + size - 5f, y + size - 8f, 5f);
+                shapeRenderer.setColor(handleR, handleG, handleB, 1f);
+                shapeRenderer.rectLine(x + 2f, y + 3f, x + 12f, y + 13f, 6f);
+                shapeRenderer.setColor(0.94f, 0.96f, 0.88f, accentAlpha);
+                shapeRenderer.circle(x + size - 5f, y + size - 8f, 3f, 10);
+                break;
+        }
     }
 
     private void renderDialoguePortraits(float pulse) {
@@ -2788,6 +2949,13 @@ public class FirstScreen implements Screen {
         if (heroTexture != null) {
             heroTexture.dispose();
         }
+        for (Texture weaponIconTexture : weaponIconTextures.values()) {
+            if (weaponIconTexture != null) {
+                weaponIconTexture.dispose();
+            }
+        }
+        weaponIconTextures.clear();
+        missingWeaponIconTextures.clear();
         FinalBoss.disposeAssets();
     }
 
