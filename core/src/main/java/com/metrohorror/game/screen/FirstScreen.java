@@ -7,6 +7,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -58,6 +59,13 @@ public class FirstScreen implements Screen {
     private static final float BEDROOM_BACKGROUND_Y = -74f;
     private static final float BEDROOM_BACKGROUND_HEIGHT = 826.6667f;
     private static final float BEDROOM_PLAYER_SCALE = 1.5f;
+    private static final float BEDROOM_TV_SCREEN_X = 856f;
+    private static final float BEDROOM_TV_SCREEN_Y = 271f;
+    private static final float BEDROOM_TV_SCREEN_WIDTH = 82f;
+    private static final float BEDROOM_TV_SCREEN_HEIGHT = 58f;
+    private static final int BEDROOM_TV_STATIC_FRAME_COUNT = 10;
+    private static final int BEDROOM_TV_STATIC_FRAME_WIDTH = 56;
+    private static final int BEDROOM_TV_STATIC_FRAME_HEIGHT = 40;
     private static final float HALLWAY_PLAYER_SCALE = 1.5f;
     private static final float STREET_PLAYER_SCALE = 1.5f;
     private static final float BOSS_PLAYER_SCALE = 1.5f;
@@ -76,11 +84,13 @@ public class FirstScreen implements Screen {
     private static final float STREET_LEFT_WALL = 286f;
     private static final float STREET_RIGHT_WALL = 2680f;
     private static final float STREET_PLAYER_EXIT_X = STREET_RETURN_DOOR.x + 18f;
+    private static final float STREET_GROUND_TOP = Constants.GROUND_Y + Constants.GROUND_HEIGHT + 64f;
     private static final float BOSS_BACKGROUND_X = 150f;
     // Lower the boss-room backdrop slightly so it lines up with the floor plane.
     private static final float BOSS_BACKGROUND_Y = 0f;
     private static final float BOSS_BACKGROUND_WIDTH = 2700f;
     private static final float BOSS_BACKGROUND_HEIGHT = 960f;
+    private static final float BOSS_CAMERA_ZOOM = 1.22f;
     private static final float BOSS_LEFT_WALL = 180f;
     private static final float BOSS_RIGHT_WALL = 2820f;
     private static final float BOSS_PLAYER_ENTRY_X = 240f;
@@ -164,6 +174,7 @@ public class FirstScreen implements Screen {
     private Texture bossTexture;
     private Texture flyingEnemyTexture;
     private Texture flyingEnemyProjectileTexture;
+    private Texture[] bedroomTvStaticFrames;
     private final EnumMap<WeaponType, Texture> weaponIconTextures = new EnumMap<WeaponType, Texture>(WeaponType.class);
     private final EnumSet<WeaponType> missingWeaponIconTextures = EnumSet.noneOf(WeaponType.class);
     private TextureRegion[] heroFrames;
@@ -248,6 +259,7 @@ public class FirstScreen implements Screen {
         glyphLayout = new GlyphLayout();
         loadHeroSpriteSheet();
         loadBedroomTexture();
+        loadBedroomTvStaticFrames();
         loadHallwayTexture();
         loadStreetTexture();
         loadBossTexture();
@@ -304,6 +316,7 @@ public class FirstScreen implements Screen {
             batch.setProjectionMatrix(camera.combined);
             batch.begin();
             renderWorldTextures();
+            renderBedroomTvStatic();
             if (locationIndex == 4 && finalBoss != null) {
                 finalBoss.renderSprite(batch);
             }
@@ -394,6 +407,7 @@ public class FirstScreen implements Screen {
         player.update(delta);
         resolveWorldCollisions();
         updateLocationTransitions();
+        updateWorldCameraZoom();
         updateCurrentLocationState(delta);
         updateDoorLock();
         checkTrashPileDiscovery();
@@ -881,7 +895,7 @@ public class FirstScreen implements Screen {
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         player.setX(BEDROOM_PLAYER_X);
-        player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
+        player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
         doorLockedUntilPlayerMoves = true;
         camera.position.x = player.getX();
@@ -914,7 +928,7 @@ public class FirstScreen implements Screen {
         } else {
             enemyProjectiles.clear();
         }
-        player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
+        player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
         camera.position.x = player.getX();
         camera.update();
@@ -928,6 +942,14 @@ public class FirstScreen implements Screen {
             enterBossLocation();
         } else if (locationIndex == 4 && player.getX() <= BOSS_LEFT_WALL + visualMarginX) {
             returnToStreetFromBoss();
+        }
+    }
+
+    private void updateWorldCameraZoom() {
+        float targetZoom = locationIndex == 4 ? BOSS_CAMERA_ZOOM : 1f;
+        if (camera.zoom != targetZoom) {
+            camera.zoom = targetZoom;
+            camera.update();
         }
     }
 
@@ -1046,6 +1068,9 @@ public class FirstScreen implements Screen {
     }
 
     private float getCurrentGroundTop() {
+        if (locationIndex == 3) {
+            return STREET_GROUND_TOP;
+        }
         if (locationIndex == 4) {
             return BOSS_ROOM_GROUND_TOP;
         }
@@ -1053,8 +1078,8 @@ public class FirstScreen implements Screen {
     }
 
     private void clampCameraToCurrentLocation() {
-        float halfWidth = camera.viewportWidth * 0.5f;
-        float halfHeight = camera.viewportHeight * 0.5f;
+        float halfWidth = camera.viewportWidth * camera.zoom * 0.5f;
+        float halfHeight = camera.viewportHeight * camera.zoom * 0.5f;
 
         if (locationIndex == 1) {
             camera.position.x = BEDROOM_RIGHT_WALL * 0.5f;
@@ -1485,7 +1510,7 @@ public class FirstScreen implements Screen {
     private void respawnAtCurrentDoor() {
         player.healToFull();
         player.setX(STREET_RETURN_DOOR.x + RESPAWN_X_OFFSET);
-        player.setY(Constants.GROUND_Y + Constants.GROUND_HEIGHT);
+        player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
         knifeSwingTimer = 0f;
         knifeDamageApplied = false;
@@ -1502,7 +1527,7 @@ public class FirstScreen implements Screen {
 
         float pulse = 0.5f + 0.5f * MathUtils.sin(time * 4.6f);
         float x = STREET_KNIFE_PICKUP.x + 26f;
-        float y = STREET_KNIFE_PICKUP.y + 8f;
+        float y = STREET_GROUND_TOP + 8f;
         shapeRenderer.setColor(0.010f, 0.012f, 0.014f, 0.82f);
         shapeRenderer.ellipse(x - 12f, y - 4f, 62f, 16f);
         shapeRenderer.setColor(0.10f, 0.12f, 0.14f, 1f);
@@ -2015,6 +2040,39 @@ public class FirstScreen implements Screen {
         bedroomTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
     }
 
+    private void loadBedroomTvStaticFrames() {
+        bedroomTvStaticFrames = new Texture[BEDROOM_TV_STATIC_FRAME_COUNT];
+        for (int frame = 0; frame < bedroomTvStaticFrames.length; frame++) {
+            Pixmap pixmap = new Pixmap(BEDROOM_TV_STATIC_FRAME_WIDTH, BEDROOM_TV_STATIC_FRAME_HEIGHT, Pixmap.Format.RGBA8888);
+            for (int y = 0; y < BEDROOM_TV_STATIC_FRAME_HEIGHT; y += 2) {
+                for (int x = 0; x < BEDROOM_TV_STATIC_FRAME_WIDTH; x += 2) {
+                    int noise = pseudoNoise(x, y, frame);
+                    float shade = 0.18f + (noise & 127) / 165f;
+                    if ((noise & 31) < 5) {
+                        shade += 0.25f;
+                    } else if ((noise & 63) > 56) {
+                        shade *= 0.42f;
+                    }
+                    shade = MathUtils.clamp(shade, 0.06f, 0.92f);
+                    pixmap.setColor(shade, shade, shade, 1f);
+                    pixmap.fillRectangle(x, y, 2, 2);
+                }
+            }
+            Texture texture = new Texture(pixmap);
+            texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            bedroomTvStaticFrames[frame] = texture;
+            pixmap.dispose();
+        }
+    }
+
+    private int pseudoNoise(int x, int y, int frame) {
+        int value = x * 734287 + y * 912271 + frame * 438289;
+        value ^= value << 13;
+        value ^= value >>> 17;
+        value ^= value << 5;
+        return value & 0x7fffffff;
+    }
+
     private void loadHallwayTexture() {
         hallwayTexture = new Texture(Gdx.files.internal("hallway_second_room.png"));
         hallwayTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
@@ -2076,6 +2134,41 @@ public class FirstScreen implements Screen {
         if (locationIndex == 4 && bossTexture != null) {
             batch.draw(bossTexture, BOSS_BACKGROUND_X, BOSS_BACKGROUND_Y, BOSS_BACKGROUND_WIDTH, BOSS_BACKGROUND_HEIGHT);
         }
+    }
+
+    private void renderBedroomTvStatic() {
+        if (locationIndex != 1 || bedroomTvStaticFrames == null || bedroomTvStaticFrames.length == 0) {
+            return;
+        }
+
+        int frameIndex = (int)(time * 18f + MathUtils.sin(time * 11.4f) * 1.7f);
+        frameIndex = Math.floorMod(frameIndex, bedroomTvStaticFrames.length);
+        Texture frame = bedroomTvStaticFrames[frameIndex];
+        float flash = 0.82f + 0.16f * MathUtils.sin(time * 29f);
+
+        batch.setColor(flash, flash, flash, 1f);
+        batch.draw(frame, BEDROOM_TV_SCREEN_X, BEDROOM_TV_SCREEN_Y, BEDROOM_TV_SCREEN_WIDTH, BEDROOM_TV_SCREEN_HEIGHT);
+
+        int tearFrame = Math.floorMod(frameIndex + 4, bedroomTvStaticFrames.length);
+        Texture tearTexture = bedroomTvStaticFrames[tearFrame];
+        int stripHeight = 6;
+        int stripY = Math.floorMod((int)(time * 93f), BEDROOM_TV_STATIC_FRAME_HEIGHT - stripHeight);
+        float bandY = BEDROOM_TV_SCREEN_Y + Math.floorMod((int)(time * 41f), (int)(BEDROOM_TV_SCREEN_HEIGHT - 10f));
+        float bandHeight = 8f;
+        float bandJitter = MathUtils.sin(time * 67f) * 3f;
+        batch.setColor(1f, 1f, 1f, 0.88f);
+        batch.draw(tearTexture,
+                BEDROOM_TV_SCREEN_X + 2f + bandJitter,
+                bandY,
+                BEDROOM_TV_SCREEN_WIDTH - 4f - Math.abs(bandJitter),
+                bandHeight,
+                0,
+                stripY,
+                BEDROOM_TV_STATIC_FRAME_WIDTH,
+                stripHeight,
+                false,
+                false);
+        batch.setColor(Color.WHITE);
     }
 
     private void renderRuinedChapelStation() {
@@ -3180,6 +3273,14 @@ public class FirstScreen implements Screen {
         }
         if (bedroomTexture != null) {
             bedroomTexture.dispose();
+        }
+        if (bedroomTvStaticFrames != null) {
+            for (Texture tvStaticFrame : bedroomTvStaticFrames) {
+                if (tvStaticFrame != null) {
+                    tvStaticFrame.dispose();
+                }
+            }
+            bedroomTvStaticFrames = null;
         }
         if (heroTexture != null) {
             heroTexture.dispose();

@@ -34,27 +34,30 @@ public class FinalBoss {
     private static final float STUN_DURATION = 2.2f;
     private static final float PULL_WINDUP_DURATION = 0.28f;
     private static final float PULL_RECOVERY_DURATION = 0.22f;
-    private static final float PULL_HAND_SPEED = 760f;
-    private static final float PULL_HAND_RETURN_SPEED = 680f;
-    private static final float PULL_PLAYER_DRAG_SPEED = 520f;
-    private static final float PULL_MAX_RANGE = 560f;
+    private static final float PULL_HAND_SPEED = 1040f;
+    private static final float PULL_HAND_RETURN_SPEED = 1180f;
+    private static final float PULL_PLAYER_DRAG_SPEED = 1180f;
+    private static final float PULL_MAX_RANGE = 1400f;
     private static final float PULL_HAND_START_DISTANCE = 92f;
-    private static final float THROW_RECOVERY = 0.55f;
-    private static final float HEAD_SPEED = 560f;
-    private static final float HEAD_RETURN_SPEED = 700f;
+    private static final String PULL_POSE_ASSET = "boss_pull_pose.png";
+    private static final String PULL_HAND_ASSET = "boss_pull_hand.png";
     private static final int MAX_HEALTH = 180;
     private static final float FACE_PLAYER_DEADZONE = 18f;
     // The leg strokes extend below the logical bounds, so the render needs a small lift.
     private static final float VISUAL_GROUND_OFFSET = 20f;
     private static final float SLASH_DURATION = 0.90f;
-    private static final float WALK_FRAME_DURATION = 0.18f;
-    private static final float RUN_FRAME_DURATION = 0.11f;
-    private static final float SPRITE_DRAW_WIDTH = 178f;
-    private static final float SPRITE_DRAW_HEIGHT = 168f;
-    private static final float SPRITE_DRAW_OFFSET_Y = 10f;
-    private static final float PULL_DRAW_SCALE = 0.84f;
+    private static final float WALK_FRAME_DURATION = 0.26f;
+    private static final float RUN_FRAME_DURATION = 0.17f;
+    private static final float BOSS_BODY_DRAW_WIDTH = 198f;
+    private static final float BOSS_BODY_DRAW_HEIGHT = 260f;
+    private static final float SPRITE_DRAW_OFFSET_Y = 0f;
+    private static final float SPRITE_NORMAL_TINT = 0.84f;
+    private static final float PULL_DRAW_SCALE = BOSS_BODY_DRAW_HEIGHT / 158f;
+    private static final float PULL_HAND_DRAW_SCALE = 0.82f;
     private static final float PULL_DRAW_OFFSET_Y = 2f;
-    private static final float SLASH_DRAW_SCALE = 0.84f;
+    private static final float PULL_POSE_LEFT_ANCHOR_OFFSET_X = -42f;
+    private static final float PULL_HAND_ANCHOR_Y = 142f;
+    private static final float SLASH_DRAW_SCALE = BOSS_BODY_DRAW_HEIGHT / 207f;
     private static final float SLASH_DRAW_OFFSET_Y = 2f;
     private static final boolean SLASH_SOURCE_FACES_RIGHT = true;
     private static final boolean PULL_SOURCE_FACES_RIGHT = true;
@@ -70,14 +73,14 @@ public class FinalBoss {
             new FrameSlice(1060, 0, 220, 236)
     };
     private static final FrameSlice[] WALK_FRAME_SLICES = new FrameSlice[] {
-            new FrameSlice(47, 283, 177, 297),
-            new FrameSlice(272, 283, 144, 297),
-            new FrameSlice(480, 283, 168, 297),
-            new FrameSlice(694, 283, 167, 297),
-            new FrameSlice(905, 283, 178, 297),
-            new FrameSlice(1132, 283, 146, 297),
-            new FrameSlice(1349, 283, 166, 297),
-            new FrameSlice(1564, 283, 163, 297)
+            new FrameSlice(1, 2, 158, 175),
+            new FrameSlice(159, 1, 160, 176),
+            new FrameSlice(319, 1, 123, 176),
+            new FrameSlice(489, 0, 128, 177),
+            new FrameSlice(658, 0, 127, 177),
+            new FrameSlice(821, 0, 101, 177),
+            new FrameSlice(986, 0, 109, 177),
+            new FrameSlice(1141, 0, 132, 177)
     };
     private static final FrameSlice[] SLASH_FRAME_SLICES = new FrameSlice[] {
             new FrameSlice(18, 0, 160, 207),
@@ -86,23 +89,23 @@ public class FinalBoss {
             new FrameSlice(906, 0, 336, 207)
     };
     private static final float[] SLASH_FRAME_PIVOT_X = new float[] { 78f, 88f, 104f, 118f };
-    private static final FrameSlice[] PULL_BOSS_FRAME_SLICES = new FrameSlice[] {
-            new FrameSlice(200, 0, 250, 185),
-            new FrameSlice(450, 0, 320, 185)
-    };
-    private static final float[] PULL_BOSS_PIVOT_X = new float[] { 92f, 108f };
-    private static final FrameSlice PULL_HAND_SLICE = new FrameSlice(1294, 0, 90, 185);
+    private static final FrameSlice PULL_BOSS_POSE_SLICE = new FrameSlice(0, 19, 289, 158);
+    private static final float PULL_BOSS_POSE_PIVOT_X = 86f;
+    private static final FrameSlice PULL_HAND_FLY_SLICE = new FrameSlice(25, 56, 207, 84);
+    private static final FrameSlice PULL_HAND_GRAB_SLICE = new FrameSlice(317, 49, 180, 96);
     private static Texture[] idleFrameTextures;
     private static Texture[] walkFrameTextures;
     private static Texture[] runFrameTextures;
     private static Texture slashSheetTexture;
-    private static Texture pullSheetTexture;
+    private static Texture pullPoseTexture;
+    private static Texture pullHandTexture;
     private static TextureRegion[] runFrames;
     private static TextureRegion[] walkFrames;
     private static TextureRegion[] idleFrames;
     private static TextureRegion[] slashFrames;
-    private static TextureRegion[] pullBossFrames;
-    private static TextureRegion pullHandFrame;
+    private static TextureRegion pullBossPoseFrame;
+    private static TextureRegion pullHandFlyFrame;
+    private static TextureRegion pullHandGrabFrame;
 
     private enum State {
         IDLE,
@@ -110,8 +113,7 @@ public class FinalBoss {
         CHARGE_WINDUP,
         CHARGING,
         STUNNED,
-        PULL,
-        THROW_HEAD
+        PULL
     }
 
     private enum PullPhase {
@@ -124,7 +126,6 @@ public class FinalBoss {
     private final Rectangle bounds = new Rectangle();
     private final Rectangle slashBounds = new Rectangle();
     private final Rectangle pullBounds = new Rectangle();
-    private final Rectangle headBounds = new Rectangle();
 
     private float x;
     private float y;
@@ -138,18 +139,11 @@ public class FinalBoss {
     private float slashCooldown;
     private float chargeCooldown;
     private float pullCooldown;
-    private float throwCooldown;
     private float playerHitCooldown;
     private float damageFlashTimer;
     private boolean attackHitApplied;
     private float chargeDirection;
 
-    private boolean headActive;
-    private boolean headReturning;
-    private float headX;
-    private float headY;
-    private float headVelocityX;
-    private float headDamageCooldown;
     private float headPressureTimer;
     private float headRepelCooldown;
     private float stompRepelCooldown;
@@ -159,6 +153,10 @@ public class FinalBoss {
     private float pullHandX;
     private float pullHandY;
     private float pullHandDistance;
+    private float pullTargetX;
+    private float pullTargetY;
+    private float pullHandPreviousX;
+    private float pullHandPreviousY;
     private float idleAnimationTime;
     private float moveAnimationTime;
     private float currentMoveSpeed;
@@ -180,17 +178,10 @@ public class FinalBoss {
         slashCooldown = 0f;
         chargeCooldown = 1.4f;
         pullCooldown = 2.8f;
-        throwCooldown = 2.2f;
         playerHitCooldown = 0f;
         damageFlashTimer = 0f;
         attackHitApplied = false;
         chargeDirection = -1f;
-        headActive = false;
-        headReturning = false;
-        headX = x;
-        headY = y + 88f;
-        headVelocityX = 0f;
-        headDamageCooldown = 0f;
         headPressureTimer = 0f;
         headRepelCooldown = 0f;
         stompRepelCooldown = 0f;
@@ -200,6 +191,10 @@ public class FinalBoss {
         pullHandX = x;
         pullHandY = y + 56f;
         pullHandDistance = 0f;
+        pullTargetX = x;
+        pullTargetY = y + 76f;
+        pullHandPreviousX = x;
+        pullHandPreviousY = y + 76f;
         idleAnimationTime = 0f;
         moveAnimationTime = 0f;
         currentMoveSpeed = 0f;
@@ -213,10 +208,8 @@ public class FinalBoss {
         slashCooldown = Math.max(0f, slashCooldown - delta);
         chargeCooldown = Math.max(0f, chargeCooldown - delta);
         pullCooldown = Math.max(0f, pullCooldown - delta);
-        throwCooldown = Math.max(0f, throwCooldown - delta);
         playerHitCooldown = Math.max(0f, playerHitCooldown - delta);
         damageFlashTimer = Math.max(0f, damageFlashTimer - delta);
-        headDamageCooldown = Math.max(0f, headDamageCooldown - delta);
         headRepelCooldown = Math.max(0f, headRepelCooldown - delta);
         headPressureTimer = Math.max(0f, headPressureTimer - delta * 0.75f);
         stompRepelCooldown = Math.max(0f, stompRepelCooldown - delta);
@@ -224,7 +217,6 @@ public class FinalBoss {
         if (!alive) {
             slashBounds.set(0f, 0f, 0f, 0f);
             pullBounds.set(0f, 0f, 0f, 0f);
-            headActive = false;
             y = groundY;
             updateBounds();
             return;
@@ -245,8 +237,6 @@ public class FinalBoss {
         updateFacingTowardsPlayer(dx);
 
         stateTimer = Math.max(0f, stateTimer - delta);
-        updateHead(delta, player, arenaMinX, arenaMaxX);
-
         if (state == State.IDLE) {
             updateIdle(delta, absDx, absDy, dx);
             pickAttack(dx, absDx, absDy);
@@ -278,16 +268,12 @@ public class FinalBoss {
                 state = State.IDLE;
                 pullBounds.set(0f, 0f, 0f, 0f);
             }
-        } else if (state == State.THROW_HEAD) {
-            if (!headActive && stateTimer <= 0f) {
-                state = State.IDLE;
-            }
         }
 
         x = MathUtils.clamp(x, arenaMinX, arenaMaxX - WIDTH);
         currentMoveSpeed = Math.abs(x - previousX) / Math.max(delta, 0.0001f);
         if ((state == State.IDLE || state == State.CHARGING) && currentMoveSpeed > 8f) {
-            moveAnimationTime += delta * MathUtils.clamp(currentMoveSpeed / MOVE_SPEED, 0.85f, 1.9f);
+            moveAnimationTime += delta * MathUtils.clamp(currentMoveSpeed / MOVE_SPEED, 0.65f, 1.05f);
         } else {
             idleAnimationTime += delta;
         }
@@ -332,15 +318,7 @@ public class FinalBoss {
             return;
         }
 
-        if (throwCooldown <= 0f && absDx > 210f) {
-            state = State.THROW_HEAD;
-            stateTimer = THROW_RECOVERY;
-            throwCooldown = 8f;
-            spawnHead();
-            return;
-        }
-
-        if (pullCooldown <= 0f && absDx > 115f && absDx < 390f) {
+        if (pullCooldown <= 0f && absDx > 250f && absDx < 560f) {
             facingRight = dx >= 0f;
             state = State.PULL;
             stateTimer = PULL_WINDUP_DURATION;
@@ -417,10 +395,7 @@ public class FinalBoss {
     }
 
     private float getPullCapturedPlayerTargetX() {
-        if (pullFacingRight) {
-            return x + WIDTH - Constants.PLAYER_WIDTH * 0.72f;
-        }
-        return x - Constants.PLAYER_WIDTH * 0.28f;
+        return x + WIDTH * 0.5f - Constants.PLAYER_WIDTH * 0.5f;
     }
 
     private void updateCharge(float delta, Player player, float arenaMinX, float arenaMaxX) {
@@ -450,6 +425,8 @@ public class FinalBoss {
     private void updatePull(float delta, Player player, float arenaMinX, float arenaMaxX) {
         if (pullPhase == PullPhase.WINDUP) {
             pullFacingRight = facingRight;
+            pullTargetX = player.getBounds().x + player.getBounds().width * 0.5f;
+            pullTargetY = player.getBounds().y + player.getBounds().height * 0.62f;
             pullBounds.set(0f, 0f, 0f, 0f);
             if (stateTimer <= 0f) {
                 startPullHandFlight();
@@ -467,10 +444,11 @@ public class FinalBoss {
         float anchorY = getPullHandAnchorY();
 
         if (pullPhase == PullPhase.OUTBOUND) {
-            pullHandDistance = Math.min(PULL_MAX_RANGE, pullHandDistance + PULL_HAND_SPEED * delta);
-            pullHandX = anchorX + direction * pullHandDistance;
-            pullHandY = anchorY;
-            pullBounds.set(pullHandX - 28f, pullHandY - 22f, 56f, 44f);
+            pullTargetX = MathUtils.lerp(pullTargetX, player.getBounds().x + player.getBounds().width * 0.5f, 0.22f);
+            pullTargetY = MathUtils.lerp(pullTargetY, player.getBounds().y + player.getBounds().height * 0.62f, 0.22f);
+            movePullHandToward(pullTargetX, pullTargetY, PULL_HAND_SPEED * delta);
+            pullHandDistance = distanceBetween(pullHandX, pullHandY, anchorX, anchorY);
+            setPullHandBounds();
 
             boolean canGrabPlayer = Math.abs(player.getBounds().y - y) < 170f;
             if (canGrabPlayer && pullBounds.overlaps(player.getBounds())) {
@@ -478,18 +456,15 @@ public class FinalBoss {
                 attackHitApplied = true;
                 pullPhase = PullPhase.RETURNING;
                 stateTimer = 1f;
-            } else if (pullHandDistance >= PULL_MAX_RANGE) {
+            } else if (!pullHandGrabbed && pullHandDistance >= PULL_MAX_RANGE) {
                 pullPhase = PullPhase.RETURNING;
                 stateTimer = 1f;
             }
             return;
         }
 
-        float dxToAnchor = anchorX - pullHandX;
-        float returnStep = Math.min(Math.abs(dxToAnchor), PULL_HAND_RETURN_SPEED * delta);
-        pullHandX += Math.signum(dxToAnchor) * returnStep;
-        pullHandY = anchorY;
-        pullBounds.set(pullHandX - 28f, pullHandY - 22f, 56f, 44f);
+        movePullHandToward(anchorX, anchorY, PULL_HAND_RETURN_SPEED * delta);
+        setPullHandBounds();
 
         if (pullHandGrabbed) {
             float playerTargetX = getPullCapturedPlayerTargetX();
@@ -502,7 +477,9 @@ public class FinalBoss {
             player.setOnGround(false);
         }
 
-        if (Math.abs(anchorX - pullHandX) <= 16f) {
+        boolean handReturned = Math.abs(anchorX - pullHandX) <= 16f;
+        boolean playerPulledThrough = !pullHandGrabbed || Math.abs(getPullCapturedPlayerTargetX() - player.getX()) <= 8f;
+        if (handReturned && playerPulledThrough) {
             pullHandActive = false;
             pullHandGrabbed = false;
             pullBounds.set(0f, 0f, 0f, 0f);
@@ -515,58 +492,46 @@ public class FinalBoss {
         pullPhase = PullPhase.OUTBOUND;
         pullHandActive = true;
         pullHandGrabbed = false;
-        pullHandDistance = PULL_HAND_START_DISTANCE;
-        pullHandX = getPullHandAnchorX() + (pullFacingRight ? 1f : -1f) * pullHandDistance;
+        pullHandDistance = 0f;
+        pullHandX = getPullHandAnchorX() + (pullFacingRight ? 1f : -1f) * 18f;
         pullHandY = getPullHandAnchorY();
+        pullHandPreviousX = getPullHandAnchorX();
+        pullHandPreviousY = getPullHandAnchorY();
         stateTimer = (PULL_MAX_RANGE - PULL_HAND_START_DISTANCE) / PULL_HAND_SPEED;
     }
 
-    private float getPullHandAnchorX() {
-        return x + (pullFacingRight ? WIDTH + 6f : WIDTH - 4f);
-    }
-
-    private float getPullHandAnchorY() {
-        return y + 76f;
-    }
-
-    private void spawnHead() {
-        headActive = true;
-        headReturning = false;
-        headX = x + (facingRight ? WIDTH + 10f : -34f);
-        headY = y + 76f;
-        headVelocityX = (facingRight ? 1f : -1f) * HEAD_SPEED;
-        headDamageCooldown = 0f;
-    }
-
-    private void updateHead(float delta, Player player, float arenaMinX, float arenaMaxX) {
-        if (!headActive) {
-            headBounds.set(0f, 0f, 0f, 0f);
+    private void movePullHandToward(float targetX, float targetY, float maxStep) {
+        pullHandPreviousX = pullHandX;
+        pullHandPreviousY = pullHandY;
+        float dx = targetX - pullHandX;
+        float dy = targetY - pullHandY;
+        float distance = (float)Math.sqrt(dx * dx + dy * dy);
+        if (distance <= maxStep || distance <= 0.001f) {
+            pullHandX = targetX;
+            pullHandY = targetY;
             return;
         }
 
-        headX += headVelocityX * delta;
-        headBounds.set(headX, headY, 34f, 34f);
+        pullHandX += dx / distance * maxStep;
+        pullHandY += dy / distance * maxStep;
+    }
 
-        if (!headReturning) {
-            boolean reachedWall = headX <= arenaMinX || headX + headBounds.width >= arenaMaxX;
-            boolean reachedRange = Math.abs(headX - x) > 360f;
-            if (reachedWall || reachedRange) {
-                headReturning = true;
-                headVelocityX = (x + WIDTH * 0.5f > headX ? 1f : -1f) * HEAD_RETURN_SPEED;
-            }
-        } else {
-            headVelocityX = (x + WIDTH * 0.5f > headX ? 1f : -1f) * HEAD_RETURN_SPEED;
-            if (Math.abs((x + WIDTH * 0.5f) - (headX + 17f)) < 26f) {
-                headActive = false;
-                headBounds.set(0f, 0f, 0f, 0f);
-                return;
-            }
-        }
+    private float distanceBetween(float x1, float y1, float x2, float y2) {
+        float dx = x1 - x2;
+        float dy = y1 - y2;
+        return (float)Math.sqrt(dx * dx + dy * dy);
+    }
 
-        if (headDamageCooldown <= 0f && headBounds.overlaps(player.getBounds())) {
-            hitPlayer(player, 11);
-            headDamageCooldown = 0.45f;
-        }
+    private float getPullHandAnchorX() {
+        return pullFacingRight ? x + WIDTH - 34f : x + 34f;
+    }
+
+    private float getPullHandAnchorY() {
+        return y + PULL_HAND_ANCHOR_Y;
+    }
+
+    private void setPullHandBounds() {
+        pullBounds.set(pullHandX - 42f, pullHandY - 30f, 84f, 60f);
     }
 
     private void hitPlayer(Player player, int damage) {
@@ -587,7 +552,6 @@ public class FinalBoss {
             alive = false;
             state = State.STUNNED;
             stateTimer = 0f;
-            headActive = false;
         }
     }
 
@@ -614,7 +578,8 @@ public class FinalBoss {
     }
 
     private static void ensureAnimationFramesLoaded() {
-        if (idleFrames != null && walkFrames != null && runFrames != null && slashFrames != null && pullBossFrames != null && pullHandFrame != null) {
+        if (idleFrames != null && walkFrames != null && runFrames != null && slashFrames != null
+                && pullBossPoseFrame != null && pullHandFlyFrame != null && pullHandGrabFrame != null) {
             return;
         }
 
@@ -631,14 +596,17 @@ public class FinalBoss {
             FrameSlice slice = SLASH_FRAME_SLICES[i];
             slashFrames[i] = new TextureRegion(slashSheetTexture, slice.x, slice.y, slice.width, slice.height);
         }
-        pullSheetTexture = new Texture(Gdx.files.internal("boss_pull_sheet.png"));
-        pullSheetTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-        pullBossFrames = new TextureRegion[PULL_BOSS_FRAME_SLICES.length];
-        for (int i = 0; i < PULL_BOSS_FRAME_SLICES.length; i++) {
-            FrameSlice slice = PULL_BOSS_FRAME_SLICES[i];
-            pullBossFrames[i] = new TextureRegion(pullSheetTexture, slice.x, slice.y, slice.width, slice.height);
-        }
-        pullHandFrame = new TextureRegion(pullSheetTexture, PULL_HAND_SLICE.x, PULL_HAND_SLICE.y, PULL_HAND_SLICE.width, PULL_HAND_SLICE.height);
+        pullPoseTexture = new Texture(Gdx.files.internal(PULL_POSE_ASSET));
+        pullPoseTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pullBossPoseFrame = new TextureRegion(pullPoseTexture,
+                PULL_BOSS_POSE_SLICE.x, PULL_BOSS_POSE_SLICE.y, PULL_BOSS_POSE_SLICE.width, PULL_BOSS_POSE_SLICE.height);
+
+        pullHandTexture = new Texture(Gdx.files.internal(PULL_HAND_ASSET));
+        pullHandTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pullHandFlyFrame = new TextureRegion(pullHandTexture,
+                PULL_HAND_FLY_SLICE.x, PULL_HAND_FLY_SLICE.y, PULL_HAND_FLY_SLICE.width, PULL_HAND_FLY_SLICE.height);
+        pullHandGrabFrame = new TextureRegion(pullHandTexture,
+                PULL_HAND_GRAB_SLICE.x, PULL_HAND_GRAB_SLICE.y, PULL_HAND_GRAB_SLICE.width, PULL_HAND_GRAB_SLICE.height);
     }
 
     private static Texture[] loadFrameTextures(String assetPath, FrameSlice[] slices) {
@@ -691,35 +659,77 @@ public class FinalBoss {
             drawY = y + SLASH_DRAW_OFFSET_Y;
             drawAnchoredFrame(batch, frame, x + WIDTH * 0.5f, drawY, SLASH_DRAW_SCALE,
                     SLASH_FRAME_PIVOT_X[slashFrameIndex], attackFacingRight, SLASH_SOURCE_FACES_RIGHT);
-        } else if (state == State.PULL && pullBossFrames != null) {
-            int pullFrameIndex = pullPhase == PullPhase.WINDUP ? 0 : 1;
-            frame = pullBossFrames[pullFrameIndex];
+        } else if (state == State.PULL && pullBossPoseFrame != null) {
+            frame = pullBossPoseFrame;
             drawY = y + PULL_DRAW_OFFSET_Y;
-            drawAnchoredFrame(batch, frame, x + WIDTH * 0.5f, drawY, PULL_DRAW_SCALE,
-                    PULL_BOSS_PIVOT_X[pullFrameIndex], pullFacingRight, PULL_SOURCE_FACES_RIGHT);
+            drawAnchoredFrame(batch, frame, getPullPoseAnchorX(), drawY, PULL_DRAW_SCALE,
+                    PULL_BOSS_POSE_PIVOT_X, pullFacingRight, PULL_SOURCE_FACES_RIGHT);
         } else if (walking && walkFrames != null) {
             frame = walkFrames[(int)(moveAnimationTime / WALK_FRAME_DURATION) % walkFrames.length];
             drawY = y + SPRITE_DRAW_OFFSET_Y;
-            batch.draw(frame, facingRight ? x + WIDTH * 0.5f + SPRITE_DRAW_WIDTH * 0.5f : x + WIDTH * 0.5f - SPRITE_DRAW_WIDTH * 0.5f, drawY,
-                    facingRight ? SPRITE_DRAW_WIDTH : -SPRITE_DRAW_WIDTH, SPRITE_DRAW_HEIGHT);
+            batch.setColor(SPRITE_NORMAL_TINT, SPRITE_NORMAL_TINT, SPRITE_NORMAL_TINT, 1f);
+            drawBossBodyFrame(batch, frame, drawY, facingRight, true);
+            batch.setColor(Color.WHITE);
         } else if (charging) {
             frame = runFrames[(int)(moveAnimationTime / RUN_FRAME_DURATION) % runFrames.length];
             drawY = y + SPRITE_DRAW_OFFSET_Y;
-            batch.draw(frame, facingRight ? x + WIDTH * 0.5f + SPRITE_DRAW_WIDTH * 0.5f : x + WIDTH * 0.5f - SPRITE_DRAW_WIDTH * 0.5f, drawY,
-                    facingRight ? -SPRITE_DRAW_WIDTH : SPRITE_DRAW_WIDTH, SPRITE_DRAW_HEIGHT);
+            drawBossBodyFrame(batch, frame, drawY, facingRight, false);
         } else {
             frame = idleFrames[0];
             drawY = y + SPRITE_DRAW_OFFSET_Y;
-            batch.draw(frame, facingRight ? x + WIDTH * 0.5f + SPRITE_DRAW_WIDTH * 0.5f : x + WIDTH * 0.5f - SPRITE_DRAW_WIDTH * 0.5f, drawY,
-                    facingRight ? -SPRITE_DRAW_WIDTH : SPRITE_DRAW_WIDTH, SPRITE_DRAW_HEIGHT);
+            drawBossBodyFrame(batch, frame, drawY, facingRight, true);
         }
 
-        if (state == State.PULL && pullHandActive && pullHandFrame != null) {
-            float handAnchorX = pullHandX;
-            float handHeight = pullHandFrame.getRegionHeight() * PULL_DRAW_SCALE;
-            float handDrawY = pullHandY - handHeight * 0.58f;
-            drawAnchoredFrame(batch, pullHandFrame, handAnchorX, handDrawY, PULL_DRAW_SCALE, 45f, pullFacingRight, PULL_SOURCE_FACES_RIGHT);
+        if (state == State.PULL && pullHandActive && pullHandFlyFrame != null && pullHandGrabFrame != null) {
+            TextureRegion handFrame = pullHandGrabbed ? pullHandGrabFrame : pullHandFlyFrame;
+            float angle = getPullHandAngle();
+            drawRotatedCenteredFrame(batch, handFrame, pullHandX, pullHandY, PULL_HAND_DRAW_SCALE, angle, pullFacingRight, PULL_SOURCE_FACES_RIGHT);
         }
+    }
+
+    private void drawRotatedCenteredFrame(SpriteBatch batch, TextureRegion frame, float centerX, float centerY, float scale,
+                                          float rotation, boolean facingRight, boolean sourceFacesRight) {
+        float drawWidth = frame.getRegionWidth() * scale;
+        float drawHeight = frame.getRegionHeight() * scale;
+        boolean flip = facingRight != sourceFacesRight;
+        float drawX = centerX - drawWidth * 0.5f;
+        float drawY = centerY - drawHeight * 0.5f;
+        batch.draw(frame,
+                flip ? drawX + drawWidth : drawX,
+                drawY,
+                flip ? drawWidth : 0f,
+                drawHeight * 0.5f,
+                flip ? -drawWidth : drawWidth,
+                drawHeight,
+                1f,
+                1f,
+                rotation);
+    }
+
+    private float getPullHandAngle() {
+        float dx = pullHandX - pullHandPreviousX;
+        float dy = pullHandY - pullHandPreviousY;
+        if (Math.abs(dx) < 0.01f && Math.abs(dy) < 0.01f) {
+            dx = pullHandX - getPullHandAnchorX();
+            dy = pullHandY - getPullHandAnchorY();
+        }
+        float angle = MathUtils.atan2(dy, Math.abs(dx)) * MathUtils.radiansToDegrees;
+        return pullFacingRight ? angle : -angle;
+    }
+
+    private void drawBossBodyFrame(SpriteBatch batch, TextureRegion frame, float drawY, boolean facingRight, boolean sourceFacesRight) {
+        boolean flip = facingRight != sourceFacesRight;
+        float drawX = x + WIDTH * 0.5f - BOSS_BODY_DRAW_WIDTH * 0.5f;
+        batch.draw(frame,
+                flip ? drawX + BOSS_BODY_DRAW_WIDTH : drawX,
+                drawY,
+                flip ? -BOSS_BODY_DRAW_WIDTH : BOSS_BODY_DRAW_WIDTH,
+                BOSS_BODY_DRAW_HEIGHT);
+    }
+
+    private float getPullPoseAnchorX() {
+        float anchorX = x + WIDTH * 0.5f;
+        return pullFacingRight ? anchorX : anchorX + PULL_POSE_LEFT_ANCHOR_OFFSET_X;
     }
 
     private void updateHeadPressureFromContact(Player player, float delta, float arenaMinX, float arenaMaxX) {
@@ -784,24 +794,15 @@ public class FinalBoss {
         shapeRenderer.rectLine(x + 44f, drawY + 22f, x + 34f, drawY - 20f, 18f);
         shapeRenderer.rectLine(x + 80f, drawY + 22f, x + 92f, drawY - 18f, 18f);
 
-        if (state == State.PULL && pullHandActive) {
-            shapeRenderer.setColor(0.22f, 0.76f, 0.84f, 0.18f + pulse * 0.10f);
-            shapeRenderer.rect(pullBounds.x, pullBounds.y, pullBounds.width, pullBounds.height);
-            shapeRenderer.setColor(0.68f, 0.94f, 1f, 0.58f);
-            shapeRenderer.rectLine(getPullHandAnchorX(), getPullHandAnchorY(), pullHandX, pullHandY, 4f);
-        } else if (state == State.CHARGING) {
-            shapeRenderer.setColor(0.95f, 0.20f, 0.14f, 0.28f);
-            shapeRenderer.rect(x - dir * 54f, drawY + 18f, WIDTH + 54f, 92f);
-        } else if (state == State.STUNNED) {
+        if (state == State.STUNNED) {
             shapeRenderer.setColor(0.92f, 0.82f, 0.38f, 0.88f);
             shapeRenderer.circle(x + WIDTH * 0.5f, drawY + 150f, 8f, 16);
             shapeRenderer.circle(x + WIDTH * 0.5f - 18f, drawY + 142f, 5f, 12);
             shapeRenderer.circle(x + WIDTH * 0.5f + 18f, drawY + 142f, 5f, 12);
         }
 
-        if (headActive) {
-            renderHead(shapeRenderer, headX, headY, dir);
-        }
+        renderPullBloodTrail(shapeRenderer, pulse);
+
     }
 
     private void renderAnimatedEffects(ShapeRenderer shapeRenderer, float time) {
@@ -809,36 +810,27 @@ public class FinalBoss {
         float drawY = y + VISUAL_GROUND_OFFSET;
         float dir = facingRight ? 1f : -1f;
 
-        if (state == State.PULL && pullHandActive) {
-            shapeRenderer.setColor(0.22f, 0.76f, 0.84f, 0.18f + pulse * 0.10f);
-            shapeRenderer.rect(pullBounds.x, pullBounds.y, pullBounds.width, pullBounds.height);
-            shapeRenderer.setColor(0.68f, 0.94f, 1f, 0.58f);
-            shapeRenderer.rectLine(getPullHandAnchorX(), getPullHandAnchorY(), pullHandX, pullHandY, 4f);
-        } else if (state == State.CHARGING) {
-            shapeRenderer.setColor(0.95f, 0.20f, 0.14f, 0.28f);
-            shapeRenderer.rect(x - dir * 54f, drawY + 18f, WIDTH + 54f, 92f);
-        } else if (state == State.STUNNED) {
+        if (state == State.STUNNED) {
             shapeRenderer.setColor(0.92f, 0.82f, 0.38f, 0.88f);
             shapeRenderer.circle(x + WIDTH * 0.5f, drawY + 150f, 8f, 16);
             shapeRenderer.circle(x + WIDTH * 0.5f - 18f, drawY + 142f, 5f, 12);
             shapeRenderer.circle(x + WIDTH * 0.5f + 18f, drawY + 142f, 5f, 12);
         }
 
-        if (headActive) {
-            renderHead(shapeRenderer, headX, headY, dir);
-        }
+        renderPullBloodTrail(shapeRenderer, pulse);
+
     }
 
-    private void renderHead(ShapeRenderer shapeRenderer, float drawX, float drawY, float dir) {
-        shapeRenderer.setColor(0.50f, 0.44f, 0.38f, 1f);
-        shapeRenderer.rect(drawX, drawY, 34f, 34f);
-        shapeRenderer.setColor(0.03f, 0.03f, 0.04f, 1f);
-        shapeRenderer.rect(drawX + 8f, drawY + 19f, 6f, 5f);
-        shapeRenderer.rect(drawX + 20f, drawY + 19f, 6f, 5f);
-        shapeRenderer.setColor(0.82f, 0.16f, 0.10f, 1f);
-        shapeRenderer.rect(drawX + (dir > 0f ? 20f : 8f), drawY + 19f, 6f, 6f);
-        shapeRenderer.setColor(0.80f, 0.70f, 0.56f, 1f);
-        shapeRenderer.rect(drawX + 10f, drawY + 8f, 14f, 7f);
+    private void renderPullBloodTrail(ShapeRenderer shapeRenderer, float pulse) {
+        if (state != State.PULL || !pullHandActive) {
+            return;
+        }
+
+        float alpha = 0.34f + pulse * 0.12f;
+        shapeRenderer.setColor(0.55f, 0.02f, 0.02f, alpha);
+        shapeRenderer.rectLine(getPullHandAnchorX(), getPullHandAnchorY(), pullHandX, pullHandY, 5f);
+        shapeRenderer.setColor(0.95f, 0.06f, 0.03f, alpha * 0.55f);
+        shapeRenderer.rectLine(getPullHandAnchorX(), getPullHandAnchorY() - 5f, pullHandX, pullHandY - 3f, 2f);
     }
 
     private void renderCorpse(ShapeRenderer shapeRenderer) {
@@ -900,11 +892,16 @@ public class FinalBoss {
             slashSheetTexture = null;
             slashFrames = null;
         }
-        if (pullSheetTexture != null) {
-            pullSheetTexture.dispose();
-            pullSheetTexture = null;
-            pullBossFrames = null;
-            pullHandFrame = null;
+        if (pullPoseTexture != null) {
+            pullPoseTexture.dispose();
+            pullPoseTexture = null;
+            pullBossPoseFrame = null;
+        }
+        if (pullHandTexture != null) {
+            pullHandTexture.dispose();
+            pullHandTexture = null;
+            pullHandFlyFrame = null;
+            pullHandGrabFrame = null;
         }
     }
 }
