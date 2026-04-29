@@ -405,9 +405,10 @@ public class FinalBoss {
         Rectangle chargeBounds = new Rectangle(x + (chargeDirection > 0f ? 44f : 8f), y + 26f, 72f, 74f);
 
         if (!attackHitApplied && chargeBounds.overlaps(player.getBounds())) {
-            hitPlayer(player, 20);
-            float shove = chargeDirection * 88f;
-            player.setX(MathUtils.clamp(player.getX() + shove, arenaMinX, arenaMaxX - Constants.PLAYER_WIDTH));
+            if (hitPlayer(player, 20)) {
+                float shove = chargeDirection * 88f;
+                player.setX(MathUtils.clamp(player.getX() + shove, arenaMinX, arenaMaxX - Constants.PLAYER_WIDTH));
+            }
             attackHitApplied = true;
         }
 
@@ -452,6 +453,10 @@ public class FinalBoss {
 
             boolean canGrabPlayer = Math.abs(player.getBounds().y - y) < 170f;
             if (canGrabPlayer && pullBounds.overlaps(player.getBounds())) {
+                if (player.registerParrySuccess()) {
+                    parryCurrentAttack(player);
+                    return;
+                }
                 pullHandGrabbed = true;
                 attackHitApplied = true;
                 pullPhase = PullPhase.RETURNING;
@@ -534,12 +539,41 @@ public class FinalBoss {
         pullBounds.set(pullHandX - 42f, pullHandY - 30f, 84f, 60f);
     }
 
-    private void hitPlayer(Player player, int damage) {
+    private boolean hitPlayer(Player player, int damage) {
         if (playerHitCooldown > 0f || !player.isAlive()) {
-            return;
+            return false;
+        }
+        if (player.registerParrySuccess()) {
+            parryCurrentAttack(player);
+            return false;
         }
         player.takeDamage(damage);
         playerHitCooldown = 0.48f;
+        return true;
+    }
+
+    private void parryCurrentAttack(Player player) {
+        playerHitCooldown = 0.34f;
+        attackHitApplied = true;
+        float bossCenterX = x + WIDTH * 0.5f;
+        float playerCenterX = player.getBounds().x + player.getBounds().width * 0.5f;
+        float recoilDirection = bossCenterX >= playerCenterX ? 1f : -1f;
+
+        if (state == State.PULL && pullHandActive) {
+            pullHandGrabbed = false;
+            pullPhase = PullPhase.RETURNING;
+            stateTimer = 0.42f;
+            pullCooldown = Math.max(pullCooldown, 3.0f);
+            return;
+        }
+
+        x += recoilDirection * 94f;
+        state = State.STUNNED;
+        stateTimer = Math.max(0.7f, STUN_DURATION * 0.42f);
+        slashBounds.set(0f, 0f, 0f, 0f);
+        pullBounds.set(0f, 0f, 0f, 0f);
+        pullHandActive = false;
+        pullHandGrabbed = false;
     }
 
     public void takeDamage(int damage) {

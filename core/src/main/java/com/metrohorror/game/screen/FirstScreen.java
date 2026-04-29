@@ -27,7 +27,9 @@ import com.metrohorror.game.entities.FinalBoss;
 import com.metrohorror.game.entities.Player;
 import com.metrohorror.game.entities.WeaponType;
 import com.metrohorror.game.screen.dialogue.DialogueScripts;
+import com.metrohorror.game.screen.location.BossLocation;
 import com.metrohorror.game.screen.location.LocationId;
+import com.metrohorror.game.screen.location.ShantyLocation;
 import com.metrohorror.game.systems.CameraSystem;
 import com.metrohorror.game.systems.InventorySystem;
 import com.metrohorror.game.ui.InventoryUI;
@@ -94,10 +96,22 @@ public class FirstScreen implements Screen {
     private static final float BOSS_LEFT_WALL = 180f;
     private static final float BOSS_RIGHT_WALL = 2820f;
     private static final float BOSS_PLAYER_ENTRY_X = 240f;
-    private static final float BOSS_PLAYER_RETURN_X = STREET_RIGHT_WALL - 220f;
-    private static final float STREET_TO_BOSS_THRESHOLD = STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - 26f;
     private static final float STREET_ENEMY_MIN_X = STREET_RETURN_DOOR.x + 115f;
     private static final float STREET_ENEMY_MAX_X = Constants.WORLD_WIDTH - 120f;
+    private static final float SHANTY_BACKGROUND_X = 0f;
+    private static final float SHANTY_BACKGROUND_Y = -36f;
+    private static final float SHANTY_BACKGROUND_WIDTH = 3000f;
+    private static final float SHANTY_BACKGROUND_HEIGHT = 1245f;
+    private static final float SHANTY_CAMERA_PADDING = 1.01f;
+    private static final float SHANTY_LEFT_WALL = 0f;
+    private static final float SHANTY_RIGHT_WALL = 3000f;
+    private static final float SHANTY_PLAYER_ENTRY_X = 130f;
+    private static final float SHANTY_PLAYER_RETURN_X = STREET_RIGHT_WALL - 220f;
+    private static final float SHANTY_PLAYER_BOSS_RETURN_X = SHANTY_RIGHT_WALL - 260f;
+    private static final float SHANTY_TO_BOSS_THRESHOLD = SHANTY_RIGHT_WALL - Constants.PLAYER_WIDTH - 26f;
+    private static final float STREET_TO_SHANTY_THRESHOLD = STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - 26f;
+    private static final float SHANTY_GROUND_TOP = 34f;
+    private static final float SHANTY_PLAYER_SCALE = 1.32f;
     private static final float BOSS_ARENA_MIN_X = 390f;
     private static final float BOSS_ARENA_MAX_X = 2640f;
     // Keep both actors on the same visible floor line in the fourth room.
@@ -171,6 +185,9 @@ public class FirstScreen implements Screen {
     private Texture bedroomTexture;
     private Texture hallwayTexture;
     private Texture streetTexture;
+    private Texture shantyTexture;
+    private Texture fogPixelTexture;
+    private Texture shantyFogTexture;
     private Texture bossTexture;
     private Texture flyingEnemyTexture;
     private Texture flyingEnemyProjectileTexture;
@@ -262,6 +279,7 @@ public class FirstScreen implements Screen {
         loadBedroomTvStaticFrames();
         loadHallwayTexture();
         loadStreetTexture();
+        loadShantyTexture();
         loadBossTexture();
         loadFlyingEnemyTextures();
         setupPauseMenuBounds();
@@ -317,7 +335,7 @@ public class FirstScreen implements Screen {
             batch.begin();
             renderWorldTextures();
             renderBedroomTvStatic();
-            if (locationIndex == 4 && finalBoss != null) {
+            if (locationIndex == BossLocation.INDEX && finalBoss != null) {
                 finalBoss.renderSprite(batch);
             }
             renderDungeonEnemySprites();
@@ -454,6 +472,9 @@ public class FirstScreen implements Screen {
             }
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
                 player.jump();
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F) || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+                player.startParry();
             }
             if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && inventorySystem.getSelectedWeapon() != null) {
                 startKnifeAttack();
@@ -861,9 +882,11 @@ public class FirstScreen implements Screen {
             return;
         }
 
-        Rectangle door = getActiveDoor();
-        if (locationIndex == 3 ? isNear(player.getBounds(), door, 96f) : isNear(player.getBounds(), door, 70f)) {
-            tryChangeLocation();
+        if (locationIndex == 2 || locationIndex == 3) {
+            Rectangle door = getActiveDoor();
+            if (locationIndex == 3 ? isNear(player.getBounds(), door, 96f) : isNear(player.getBounds(), door, 70f)) {
+                tryChangeLocation();
+            }
         }
     }
 
@@ -938,23 +961,71 @@ public class FirstScreen implements Screen {
 
     private void updateLocationTransitions() {
         float visualMarginX = getPlayerVisualMarginX();
-        if (locationIndex == 3 && player.getX() >= STREET_TO_BOSS_THRESHOLD - visualMarginX) {
+        if (locationIndex == 3 && player.getX() >= STREET_TO_SHANTY_THRESHOLD - visualMarginX) {
+            enterShantyLocation();
+        } else if (locationIndex == ShantyLocation.INDEX && player.getX() <= SHANTY_LEFT_WALL + visualMarginX) {
+            returnToStreetFromShanty();
+        } else if (locationIndex == ShantyLocation.INDEX && player.getX() >= SHANTY_TO_BOSS_THRESHOLD - visualMarginX) {
             enterBossLocation();
-        } else if (locationIndex == 4 && player.getX() <= BOSS_LEFT_WALL + visualMarginX) {
-            returnToStreetFromBoss();
+        } else if (locationIndex == BossLocation.INDEX && player.getX() <= BOSS_LEFT_WALL + visualMarginX) {
+            returnToShantyFromBoss();
         }
     }
 
     private void updateWorldCameraZoom() {
-        float targetZoom = locationIndex == 4 ? BOSS_CAMERA_ZOOM : 1f;
+        float targetZoom = getTargetCameraZoom();
         if (camera.zoom != targetZoom) {
             camera.zoom = targetZoom;
             camera.update();
         }
     }
 
+    private float getTargetCameraZoom() {
+        if (locationIndex == ShantyLocation.INDEX) {
+            float widthZoom = SHANTY_BACKGROUND_WIDTH / camera.viewportWidth;
+            float heightZoom = SHANTY_BACKGROUND_HEIGHT / camera.viewportHeight;
+            return Math.min(widthZoom, heightZoom) * SHANTY_CAMERA_PADDING;
+        }
+        if (locationIndex == BossLocation.INDEX) {
+            return BOSS_CAMERA_ZOOM;
+        }
+        return 1f;
+    }
+
+    private void enterShantyLocation() {
+        locationIndex = ShantyLocation.INDEX;
+        gameMap = baseMap;
+        dialogueVisible = false;
+        dialogueTypeTimer = 0f;
+        inventoryVisible = false;
+        doorLockedUntilPlayerMoves = false;
+        enemyProjectiles.clear();
+        player.setX(SHANTY_PLAYER_ENTRY_X);
+        player.setY(getCurrentGroundTop());
+        player.setVelocityY(0f);
+        camera.position.x = player.getX();
+        camera.update();
+        clampCameraToCurrentLocation();
+    }
+
+    private void returnToStreetFromShanty() {
+        locationIndex = 3;
+        gameMap = baseMap;
+        dialogueVisible = false;
+        dialogueTypeTimer = 0f;
+        inventoryVisible = false;
+        doorLockedUntilPlayerMoves = false;
+        spawnDungeonEnemies();
+        player.setX(SHANTY_PLAYER_RETURN_X);
+        player.setY(getCurrentGroundTop());
+        player.setVelocityY(0f);
+        camera.position.x = player.getX();
+        camera.update();
+        clampCameraToCurrentLocation();
+    }
+
     private void enterBossLocation() {
-        locationIndex = 4;
+        locationIndex = BossLocation.INDEX;
         gameMap = baseMap;
         dialogueVisible = false;
         dialogueTypeTimer = 0f;
@@ -969,15 +1040,15 @@ public class FirstScreen implements Screen {
         clampCameraToCurrentLocation();
     }
 
-    private void returnToStreetFromBoss() {
-        locationIndex = 3;
+    private void returnToShantyFromBoss() {
+        locationIndex = ShantyLocation.INDEX;
         gameMap = baseMap;
         dialogueVisible = false;
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         doorLockedUntilPlayerMoves = false;
-        spawnDungeonEnemies();
-        player.setX(BOSS_PLAYER_RETURN_X);
+        enemyProjectiles.clear();
+        player.setX(SHANTY_PLAYER_BOSS_RETURN_X);
         player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
         camera.position.x = player.getX();
@@ -995,7 +1066,7 @@ public class FirstScreen implements Screen {
             return;
         }
 
-        if (locationIndex != 4) {
+        if (locationIndex != BossLocation.INDEX) {
             enemyProjectiles.clear();
             return;
         }
@@ -1056,7 +1127,10 @@ public class FirstScreen implements Screen {
         if (locationIndex == 3) {
             return STREET_PLAYER_SCALE;
         }
-        if (locationIndex == 4) {
+        if (locationIndex == ShantyLocation.INDEX) {
+            return SHANTY_PLAYER_SCALE;
+        }
+        if (locationIndex == BossLocation.INDEX) {
             return BOSS_PLAYER_SCALE;
         }
         return 1f;
@@ -1071,7 +1145,10 @@ public class FirstScreen implements Screen {
         if (locationIndex == 3) {
             return STREET_GROUND_TOP;
         }
-        if (locationIndex == 4) {
+        if (locationIndex == ShantyLocation.INDEX) {
+            return SHANTY_GROUND_TOP;
+        }
+        if (locationIndex == BossLocation.INDEX) {
             return BOSS_ROOM_GROUND_TOP;
         }
         return gameMap.getGround().y + gameMap.getGround().height;
@@ -1091,7 +1168,16 @@ public class FirstScreen implements Screen {
             float minX = STREET_LEFT_WALL + halfWidth;
             float maxX = STREET_RIGHT_WALL - halfWidth;
             camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
-        } else if (locationIndex == 4) {
+        } else if (locationIndex == ShantyLocation.INDEX) {
+            float minX = SHANTY_BACKGROUND_X + halfWidth;
+            float maxX = SHANTY_BACKGROUND_X + SHANTY_BACKGROUND_WIDTH - halfWidth;
+            float minY = SHANTY_BACKGROUND_Y + halfHeight;
+            float maxY = SHANTY_BACKGROUND_Y + SHANTY_BACKGROUND_HEIGHT - halfHeight;
+            camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
+            camera.position.y = MathUtils.clamp(camera.position.y, minY, Math.max(minY, maxY));
+            camera.update();
+            return;
+        } else if (locationIndex == BossLocation.INDEX) {
             float minX = BOSS_LEFT_WALL + halfWidth;
             float maxX = BOSS_RIGHT_WALL - halfWidth;
             camera.position.x = MathUtils.clamp(camera.position.x, minX, Math.max(minX, maxX));
@@ -1151,7 +1237,11 @@ public class FirstScreen implements Screen {
             player.setX(STREET_LEFT_WALL + visualMarginX);
             return;
         }
-        if (locationIndex == 4 && player.getX() < BOSS_LEFT_WALL + visualMarginX) {
+        if (locationIndex == ShantyLocation.INDEX && player.getX() < SHANTY_LEFT_WALL + visualMarginX) {
+            player.setX(SHANTY_LEFT_WALL + visualMarginX);
+            return;
+        }
+        if (locationIndex == BossLocation.INDEX && player.getX() < BOSS_LEFT_WALL + visualMarginX) {
             player.setX(BOSS_LEFT_WALL + visualMarginX);
             return;
         }
@@ -1168,7 +1258,11 @@ public class FirstScreen implements Screen {
             player.setX(STREET_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
             return;
         }
-        if (locationIndex == 4 && player.getX() > BOSS_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
+        if (locationIndex == ShantyLocation.INDEX && player.getX() > SHANTY_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
+            player.setX(SHANTY_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
+            return;
+        }
+        if (locationIndex == BossLocation.INDEX && player.getX() > BOSS_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX) {
             player.setX(BOSS_RIGHT_WALL - Constants.PLAYER_WIDTH - visualMarginX);
             return;
         }
@@ -1185,6 +1279,8 @@ public class FirstScreen implements Screen {
         } else if (locationIndex == 3) {
             renderStreetExterior();
             renderStreetKnifePickup();
+        } else if (locationIndex == ShantyLocation.INDEX) {
+            renderShantyCity();
         } else {
             renderBossLaboratory();
         }
@@ -1196,11 +1292,12 @@ public class FirstScreen implements Screen {
             renderDungeonEnemies();
             renderEnemyProjectileGlow();
         }
-        if (locationIndex == 4 && finalBoss != null) {
+        if (locationIndex == BossLocation.INDEX && finalBoss != null) {
             finalBoss.render(shapeRenderer, time);
         }
         // Keep slash effects in the actor pass so left/right/up/down swings stay visible.
         renderKnifeSlash();
+        renderParryEffect();
     }
 
     private void checkTrashPileDiscovery() {
@@ -1279,7 +1376,7 @@ public class FirstScreen implements Screen {
             }
         }
 
-        if (locationIndex == 4 && finalBoss != null && finalBoss.isAlive() && attackBounds.overlaps(finalBoss.getBounds())) {
+        if (locationIndex == BossLocation.INDEX && finalBoss != null && finalBoss.isAlive() && attackBounds.overlaps(finalBoss.getBounds())) {
             Rectangle bossHeadBounds = finalBoss.getHeadBounds();
             boolean attackingFromAbove = player.getBounds().y >= bossHeadBounds.y - 8f;
             // Any top-side attack pressure is absorbed by the head and never converts into damage.
@@ -1429,7 +1526,11 @@ public class FirstScreen implements Screen {
                 float lungeTarget = playerCenterX + (dx > 0f ? -30f : 30f);
                 enemy.moveToward(lungeTarget, enemy.getSpeed() * enemy.getLungePower(), delta);
                 if (absDx <= enemy.getAttackRange()) {
-                    player.takeDamage(enemy.getDamage());
+                    if (player.registerParrySuccess()) {
+                        enemy.moveBy(dx > 0f ? -82f : 82f);
+                    } else {
+                        player.takeDamage(enemy.getDamage());
+                    }
                 }
             }
     }
@@ -1478,7 +1579,26 @@ public class FirstScreen implements Screen {
             EnemyProjectile projectile = enemyProjectiles.get(i);
             projectile.update(delta);
 
+            if (projectile.reflected) {
+                boolean hitEnemy = false;
+                for (Enemy enemy : dungeonEnemies) {
+                    if (enemy.isAlive() && projectile.bounds.overlaps(enemy.getBounds())) {
+                        enemy.takeDamage(Math.max(4, projectile.damage));
+                        enemyProjectiles.removeIndex(i);
+                        hitEnemy = true;
+                        break;
+                    }
+                }
+                if (hitEnemy) {
+                    continue;
+                }
+            }
+
             if (projectile.bounds.overlaps(player.getBounds()) && player.isAlive()) {
+                if (!projectile.reflected && player.registerParrySuccess()) {
+                    reflectProjectile(projectile);
+                    continue;
+                }
                 player.takeDamage(projectile.damage);
                 enemyProjectiles.removeIndex(i);
                 continue;
@@ -1492,6 +1612,38 @@ public class FirstScreen implements Screen {
                 enemyProjectiles.removeIndex(i);
             }
         }
+    }
+
+    private void reflectProjectile(EnemyProjectile projectile) {
+        float targetX = findNearestLivingEnemyCenterX(projectile.bounds.x + projectile.bounds.width * 0.5f);
+        float centerX = projectile.bounds.x + projectile.bounds.width * 0.5f;
+        float centerY = projectile.bounds.y + projectile.bounds.height * 0.5f;
+        float dx = targetX - centerX;
+        float dy = Constants.GROUND_Y + Constants.GROUND_HEIGHT + 270f - centerY;
+        float distance = Math.max(1f, (float)Math.sqrt(dx * dx + dy * dy));
+        float speed = Math.max(420f, (float)Math.sqrt(projectile.velocityX * projectile.velocityX + projectile.velocityY * projectile.velocityY) * 1.35f);
+        projectile.velocityX = dx / distance * speed;
+        projectile.velocityY = dy / distance * speed;
+        projectile.rotation = (float)Math.toDegrees(Math.atan2(projectile.velocityY, projectile.velocityX));
+        projectile.reflected = true;
+        projectile.lifeTimer = FLYING_ENEMY_PROJECTILE_LIFETIME;
+    }
+
+    private float findNearestLivingEnemyCenterX(float x) {
+        float nearestX = player.isFacingRight() ? x + 480f : x - 480f;
+        float nearestDistance = Float.MAX_VALUE;
+        for (Enemy enemy : dungeonEnemies) {
+            if (!enemy.isAlive()) {
+                continue;
+            }
+            float enemyCenterX = enemy.getBounds().x + enemy.getBounds().width * 0.5f;
+            float distance = Math.abs(enemyCenterX - x);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestX = enemyCenterX;
+            }
+        }
+        return nearestX;
     }
 
     private void resolveEnemyGrounding(Enemy enemy) {
@@ -1619,9 +1771,17 @@ public class FirstScreen implements Screen {
             float alpha = Math.min(0.42f, 0.18f + projectile.lifeTimer * 0.04f);
             float centerX = projectile.bounds.x + projectile.bounds.width * 0.5f;
             float centerY = projectile.bounds.y + projectile.bounds.height * 0.5f;
-            shapeRenderer.setColor(0.68f, 0.12f, 0.10f, alpha);
+            if (projectile.reflected) {
+                shapeRenderer.setColor(0.18f, 0.72f, 0.88f, alpha);
+            } else {
+                shapeRenderer.setColor(0.68f, 0.12f, 0.10f, alpha);
+            }
             shapeRenderer.circle(centerX, centerY, FLYING_ENEMY_PROJECTILE_GLOW, 18);
-            shapeRenderer.setColor(1f, 0.40f, 0.30f, alpha * 0.75f);
+            if (projectile.reflected) {
+                shapeRenderer.setColor(0.82f, 0.98f, 1f, alpha * 0.75f);
+            } else {
+                shapeRenderer.setColor(1f, 0.40f, 0.30f, alpha * 0.75f);
+            }
             shapeRenderer.circle(centerX, centerY, FLYING_ENEMY_PROJECTILE_GLOW * 0.55f, 16);
         }
     }
@@ -1795,6 +1955,72 @@ public class FirstScreen implements Screen {
                     arcCenterX + dir * (forwardRange + 54f), arcCenterY,
                     arcCenterX + dir * 30f, arcCenterY + 26f);
             return;
+        }
+    }
+
+    private void renderParryEffect() {
+        float cooldown = player.getParryCooldownProgress();
+        if (!player.isParrying() && !player.isParrySuccessVisible() && cooldown <= 0f) {
+            return;
+        }
+
+        Rectangle b = player.getBounds();
+        float centerX = b.x + b.width * 0.5f + (player.isFacingRight() ? 34f : -34f);
+        float centerY = b.y + b.height * 0.72f;
+        float dir = player.isFacingRight() ? 1f : -1f;
+        float success = MathUtils.clamp(player.getParrySuccessTimer() / 0.24f, 0f, 1f);
+        float guardAlpha = player.isParrying() ? 0.48f : 0.12f * success;
+
+        if (cooldown > 0f && !player.isParrying()) {
+            float ringX = b.x + b.width * 0.5f;
+            float ringY = b.y + b.height + 18f;
+            shapeRenderer.setColor(0.05f, 0.08f, 0.09f, 0.48f);
+            shapeRenderer.circle(ringX, ringY, 13f, 20);
+            shapeRenderer.setColor(0.24f, 0.70f, 0.78f, 0.58f);
+            shapeRenderer.arc(ringX, ringY, 15f, 90f, -360f * cooldown, 22);
+        }
+
+        shapeRenderer.setColor(0.22f, 0.68f, 0.82f, guardAlpha);
+        shapeRenderer.arc(centerX - dir * 20f, centerY, 58f, player.isFacingRight() ? -48f : 112f, 96f, 18);
+        shapeRenderer.setColor(0.82f, 0.97f, 1f, guardAlpha * 0.9f);
+        shapeRenderer.arc(centerX - dir * 20f, centerY, 43f, player.isFacingRight() ? -38f : 122f, 76f, 16);
+
+        if (player.isParrying()) {
+            shapeRenderer.setColor(0.75f, 0.98f, 1f, 0.54f);
+            shapeRenderer.rectLine(
+                    b.x + b.width * 0.5f - dir * 4f,
+                    centerY - 8f,
+                    centerX + dir * 34f,
+                    centerY + 12f,
+                    6f);
+            shapeRenderer.setColor(0.16f, 0.72f, 0.82f, 0.34f);
+            shapeRenderer.triangle(
+                    b.x + b.width * 0.5f,
+                    centerY - 20f,
+                    centerX + dir * 56f,
+                    centerY + 4f,
+                    b.x + b.width * 0.5f,
+                    centerY + 24f);
+        }
+
+        if (success <= 0f) {
+            return;
+        }
+
+        for (int i = 0; i < 10; i++) {
+            float angle = -58f + i * 13f;
+            if (!player.isFacingRight()) {
+                angle = 180f - angle;
+            }
+            float radians = angle * MathUtils.degreesToRadians;
+            float startX = centerX + MathUtils.cos(radians) * (18f + i % 3 * 4f);
+            float startY = centerY + MathUtils.sin(radians) * (10f + i % 2 * 5f);
+            float endX = startX + MathUtils.cos(radians) * (34f + success * 22f);
+            float endY = startY + MathUtils.sin(radians) * (18f + success * 16f);
+            shapeRenderer.setColor(1f, 0.78f, 0.28f, 0.72f * success);
+            shapeRenderer.rectLine(startX, startY, endX, endY, 2.6f);
+            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.50f * success);
+            shapeRenderer.circle(endX, endY, 3.2f, 8);
         }
     }
 
@@ -2083,6 +2309,38 @@ public class FirstScreen implements Screen {
         streetTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
 
+    private void loadShantyTexture() {
+        shantyTexture = new Texture(Gdx.files.internal("shanty_fourth_room.png"));
+        shantyTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        pixmap.fill();
+        fogPixelTexture = new Texture(pixmap);
+        pixmap.dispose();
+        shantyFogTexture = createFogTexture();
+    }
+
+    private Texture createFogTexture() {
+        int width = 256;
+        int height = 96;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        for (int y = 0; y < height; y++) {
+            float vertical = 1f - Math.abs((y - height * 0.5f) / (height * 0.5f));
+            for (int x = 0; x < width; x++) {
+                float wave = 0.5f + 0.5f * MathUtils.sin(x * 0.035f + y * 0.07f);
+                float wave2 = 0.5f + 0.5f * MathUtils.sin(x * 0.083f - y * 0.045f + 1.7f);
+                float edge = MathUtils.clamp(Math.min(x / 28f, (width - 1 - x) / 28f), 0f, 1f);
+                float alpha = MathUtils.clamp((vertical * 0.62f + wave * 0.24f + wave2 * 0.18f - 0.36f) * edge, 0f, 1f);
+                pixmap.setColor(1f, 1f, 1f, alpha * 0.74f);
+                pixmap.drawPixel(x, y);
+            }
+        }
+        Texture texture = new Texture(pixmap);
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pixmap.dispose();
+        return texture;
+    }
+
     private void loadBossTexture() {
         bossTexture = new Texture(Gdx.files.internal("boss_fourth_room.png"));
         bossTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
@@ -2131,9 +2389,45 @@ public class FirstScreen implements Screen {
             batch.draw(streetTexture, STREET_BACKGROUND_X, STREET_BACKGROUND_Y, STREET_BACKGROUND_WIDTH, STREET_BACKGROUND_HEIGHT);
             return;
         }
-        if (locationIndex == 4 && bossTexture != null) {
+        if (locationIndex == ShantyLocation.INDEX && shantyTexture != null) {
+            batch.draw(shantyTexture, SHANTY_BACKGROUND_X, SHANTY_BACKGROUND_Y, SHANTY_BACKGROUND_WIDTH, SHANTY_BACKGROUND_HEIGHT);
+            renderShantyFogBatch();
+            return;
+        }
+        if (locationIndex == BossLocation.INDEX && bossTexture != null) {
             batch.draw(bossTexture, BOSS_BACKGROUND_X, BOSS_BACKGROUND_Y, BOSS_BACKGROUND_WIDTH, BOSS_BACKGROUND_HEIGHT);
         }
+    }
+
+    private void renderShantyFogBatch() {
+        if (fogPixelTexture == null || shantyFogTexture == null) {
+            return;
+        }
+
+        batch.setColor(0.12f, 0.16f, 0.17f, 0.055f);
+        batch.draw(fogPixelTexture, SHANTY_BACKGROUND_X, 300f, SHANTY_BACKGROUND_WIDTH, 470f);
+        batch.setColor(0.06f, 0.07f, 0.075f, 0.06f);
+        batch.draw(fogPixelTexture, SHANTY_BACKGROUND_X, 770f, SHANTY_BACKGROUND_WIDTH, 210f);
+
+        float drift = MathUtils.sin(time * 0.18f) * 42f;
+        for (int i = 0; i < 18; i++) {
+            float x = Math.floorMod((int)(i * 205f + drift + MathUtils.sin(i * 1.9f) * 80f), (int)SHANTY_BACKGROUND_WIDTH) - 190f;
+            float y = 315f + (i % 5) * 82f + MathUtils.sin(time * 0.24f + i * 0.7f) * 24f;
+            float width = 330f + (i % 4) * 96f;
+            float height = 78f + (i % 3) * 26f;
+            float alpha = 0.09f + (i % 4) * 0.018f;
+            batch.setColor(0.64f, 0.76f, 0.78f, alpha);
+            batch.draw(shantyFogTexture, x, y, width, height);
+        }
+
+        for (int i = 0; i < 7; i++) {
+            float x = 130f + i * 430f + MathUtils.sin(time * 0.12f + i) * 28f;
+            float y = 580f + (i % 2) * 76f;
+            batch.setColor(0.70f, 0.82f, 0.84f, 0.07f);
+            batch.draw(shantyFogTexture, x, y, 520f, 140f);
+        }
+
+        batch.setColor(Color.WHITE);
     }
 
     private void renderBedroomTvStatic() {
@@ -2227,6 +2521,35 @@ public class FirstScreen implements Screen {
         float pulse = 0.5f + 0.5f * MathUtils.sin(time * 2.6f);
         shapeRenderer.setColor(0.16f, 0.38f + pulse * 0.14f, 0.28f + pulse * 0.10f, 0.20f);
         shapeRenderer.rect(BOSS_ARENA_MIN_X, 170f, BOSS_ARENA_MAX_X - BOSS_ARENA_MIN_X, 12f);
+    }
+
+    private void renderShantyCity() {
+        shapeRenderer.setColor(0.006f, 0.008f, 0.010f, 1f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, Constants.WORLD_HEIGHT);
+        drawShantyWalkway();
+    }
+
+    private void drawShantyWalkway() {
+        shapeRenderer.setColor(0.012f, 0.011f, 0.012f, 0.92f);
+        shapeRenderer.rect(0f, 0f, Constants.WORLD_WIDTH, SHANTY_GROUND_TOP + 12f);
+        shapeRenderer.setColor(0.032f, 0.026f, 0.025f, 0.78f);
+        shapeRenderer.rect(0f, SHANTY_GROUND_TOP - 5f, Constants.WORLD_WIDTH, 12f);
+        shapeRenderer.setColor(0.070f, 0.044f, 0.036f, 0.38f);
+        shapeRenderer.rect(0f, SHANTY_GROUND_TOP + 4f, Constants.WORLD_WIDTH, 3f);
+
+        for (int i = 0; i < 22; i++) {
+            float x = i * 142f + MathUtils.sin(i * 1.7f) * 18f;
+            float y = 9f + MathUtils.sin(i * 2.3f) * 5f;
+            float width = 44f + (i % 5) * 12f;
+            shapeRenderer.setColor(0.050f, 0.044f, 0.044f, 0.38f);
+            shapeRenderer.ellipse(x, y, width, 8f + (i % 3) * 3f);
+        }
+
+        for (int i = 0; i < 16; i++) {
+            float x = i * 196f + 34f;
+            shapeRenderer.setColor(0.090f, 0.050f, 0.040f, 0.30f);
+            shapeRenderer.rect(x, SHANTY_GROUND_TOP - 11f + (i % 2) * 3f, 72f, 2f);
+        }
     }
 
     private void renderDungeonDepths() {
@@ -2551,7 +2874,7 @@ public class FirstScreen implements Screen {
             x += player.isFacingRight() ? 18f : -18f;
         }
         float y = b.y - 4f;
-        if (locationIndex >= 1 && locationIndex <= 4) {
+        if (locationIndex >= 1 && locationIndex <= BossLocation.INDEX) {
             float locationScale = getLocationPlayerScale();
             drawWidth *= locationScale;
             drawHeight *= locationScale;
@@ -2685,7 +3008,7 @@ public class FirstScreen implements Screen {
         String place = LocationId.fromIndex(locationIndex).getDisplayName();
         font.draw(batch, place, 22, uiCamera.viewportHeight - 18f);
         font.draw(batch, "A/D \u0445\u043e\u0434\u044c\u0431\u0430 | SPACE \u043f\u0440\u044b\u0436\u043e\u043a | E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 | TAB \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c", 22, uiCamera.viewportHeight - 44f);
-        font.draw(batch, "W/S + \u041b\u041a\u041c: \u0443\u0434\u0430\u0440 \u0432\u0432\u0435\u0440\u0445/\u0432\u043d\u0438\u0437 | 1-2: \u043e\u0440\u0443\u0436\u0438\u0435 \u0432 \u0440\u0443\u043a\u0430\u0445", 22, uiCamera.viewportHeight - 70f);
+        font.draw(batch, "W/S + \u041b\u041a\u041c: \u0443\u0434\u0430\u0440 \u0432\u0432\u0435\u0440\u0445/\u0432\u043d\u0438\u0437 | F/\u041f\u041a\u041c: \u043f\u0430\u0440\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 | 1-2: \u043e\u0440\u0443\u0436\u0438\u0435", 22, uiCamera.viewportHeight - 70f);
         WeaponType selectedWeapon = inventorySystem.getSelectedWeapon();
         if (selectedWeapon != null) {
             font.draw(batch, "\u0412 \u0440\u0443\u043a\u0430\u0445: " + selectedWeapon.getDisplayName() + " | \u041b\u041a\u041c: \u0443\u0434\u0430\u0440", 22, uiCamera.viewportHeight - 96f);
@@ -2711,12 +3034,18 @@ public class FirstScreen implements Screen {
                 prompt = "\u041d\u0430\u0436\u043c\u0438 E, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u043e\u0431\u0440\u0430\u0442\u044c \u043d\u043e\u0436";
             }
             if (prompt == null && locationIndex == 3 && player.getX() > STREET_RIGHT_WALL - 170f) {
-                prompt = "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u043b\u0430\u0431\u043e\u0440\u0430\u0442\u043e\u0440\u0438\u044e";
+                prompt = "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u041d\u0438\u0436\u043d\u0438\u0439 \u0433\u043e\u0440\u043e\u0434";
             }
-            if (prompt == null && locationIndex == 4 && player.getX() < BOSS_LEFT_WALL + 160f) {
+            if (prompt == null && locationIndex == ShantyLocation.INDEX && player.getX() < SHANTY_LEFT_WALL + 180f) {
                 prompt = "\u0418\u0434\u0438 \u0432\u043b\u0435\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043d\u0430 \u0443\u043b\u0438\u0446\u0443";
             }
-            if (prompt == null) {
+            if (prompt == null && locationIndex == ShantyLocation.INDEX && player.getX() > SHANTY_RIGHT_WALL - 180f) {
+                prompt = "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u043b\u0430\u0431\u043e\u0440\u0430\u0442\u043e\u0440\u0438\u044e";
+            }
+            if (prompt == null && locationIndex == BossLocation.INDEX && player.getX() < BOSS_LEFT_WALL + 160f) {
+                prompt = "\u0418\u0434\u0438 \u0432\u043b\u0435\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u041d\u0438\u0436\u043d\u0438\u0439 \u0433\u043e\u0440\u043e\u0434";
+            }
+            if (prompt == null && (locationIndex == 1 || locationIndex == 2 || locationIndex == 3)) {
                 Rectangle door = getActiveDoor();
                 float promptRange = locationIndex == 3 ? 96f : 70f;
                 if (isNear(player.getBounds(), door, promptRange)) {
@@ -2752,7 +3081,7 @@ public class FirstScreen implements Screen {
     }
 
     private void renderHealthBar() {
-        if (locationIndex != 4 || finalBoss == null || !finalBoss.isAlive()) {
+        if (locationIndex != BossLocation.INDEX || finalBoss == null || !finalBoss.isAlive()) {
             return;
         }
         float barWidth = 420f;
@@ -2763,7 +3092,7 @@ public class FirstScreen implements Screen {
     }
 
     private void renderBossHealthBarPanel() {
-        if (locationIndex != 4 || finalBoss == null || !finalBoss.isAlive()) {
+        if (locationIndex != BossLocation.INDEX || finalBoss == null || !finalBoss.isAlive()) {
             return;
         }
 
@@ -3265,6 +3594,15 @@ public class FirstScreen implements Screen {
         if (streetTexture != null) {
             streetTexture.dispose();
         }
+        if (shantyTexture != null) {
+            shantyTexture.dispose();
+        }
+        if (fogPixelTexture != null) {
+            fogPixelTexture.dispose();
+        }
+        if (shantyFogTexture != null) {
+            shantyFogTexture.dispose();
+        }
         if (bossTexture != null) {
             bossTexture.dispose();
         }
@@ -3303,10 +3641,11 @@ public class FirstScreen implements Screen {
 
     private static final class EnemyProjectile {
         private final Rectangle bounds = new Rectangle();
-        private final float velocityX;
-        private final float velocityY;
+        private float velocityX;
+        private float velocityY;
         private final int damage;
-        private final float rotation;
+        private float rotation;
+        private boolean reflected;
         private float lifeTimer = FLYING_ENEMY_PROJECTILE_LIFETIME;
 
         private EnemyProjectile(float centerX, float centerY, float velocityX, float velocityY, int damage) {
