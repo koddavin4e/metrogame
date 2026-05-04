@@ -6,7 +6,8 @@ import com.metrohorror.game.util.Constants;
 public class Enemy {
     public enum Type {
         GROUND,
-        FLYING_SHOOTER
+        FLYING_SHOOTER,
+        FLYING_SLASHER
     }
 
     public enum AttackStyle {
@@ -124,6 +125,25 @@ public class Enemy {
         );
     }
 
+    public static Enemy createFlyingSlasher(float x, float y) {
+        return new Enemy(
+                x, y,
+                12,
+                164f,
+                10,
+                AttackStyle.LUNGE,
+                0.24f, 0.05f, 0.08f,
+                0.76f, 0.63f, 0.56f,
+                Type.FLYING_SLASHER,
+                82f, 54f,
+                y,
+                24f,
+                0f,
+                0f,
+                0f
+        );
+    }
+
     public void update(float delta) {
         attackCooldown = Math.max(0f, attackCooldown - delta);
         attackAnimationTimer = Math.max(0f, attackAnimationTimer - delta);
@@ -233,6 +253,10 @@ public class Enemy {
 
     public boolean isFlyingShooter() {
         return type == Type.FLYING_SHOOTER;
+    }
+
+    public boolean isFlyingSlasher() {
+        return type == Type.FLYING_SLASHER;
     }
 
     public float getX() {

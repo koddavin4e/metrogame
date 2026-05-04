@@ -130,6 +130,7 @@ public class FirstScreen implements Screen {
     private static final float DAMAGE_TEXT_LIFETIME = 0.72f;
     private static final String FLYING_ENEMY_ASSET = "enemy_bat_sheet.png";
     private static final String FLYING_ENEMY_PROJECTILE_ASSET = "enemy_bat_projectile.png";
+    private static final String FLYING_SLASHER_ASSET = "enemy_reaper_sheet.png";
     private static final int[] FLYING_ENEMY_FRAME_X = {8, 160, 308, 453, 608};
     private static final int[] FLYING_ENEMY_FRAME_WIDTH = {132, 130, 125, 141, 139};
     private static final float FLYING_ENEMY_DRAW_WIDTH = 118f;
@@ -141,6 +142,16 @@ public class FirstScreen implements Screen {
     private static final float FLYING_ENEMY_PROJECTILE_DRAW_HEIGHT = 18f;
     private static final float FLYING_ENEMY_PROJECTILE_LIFETIME = 4.5f;
     private static final float FLYING_ENEMY_PROJECTILE_GLOW = 10f;
+    private static final int FLYING_SLASHER_FRAME_COUNT = 4;
+    private static final int FLYING_SLASHER_FRAME_WIDTH = 543;
+    private static final int FLYING_SLASHER_FRAME_HEIGHT = 724;
+    private static final float FLYING_SLASHER_DRAW_WIDTH = 136f;
+    private static final float FLYING_SLASHER_DRAW_HEIGHT = 112f;
+    private static final int[] FLYING_SLASHER_IDLE_FRAMES = {2, 3};
+    private static final float FLYING_SLASHER_IDLE_ANIM_SPEED = 3.2f;
+    private static final float FLYING_SLASHER_ENGAGE_X_RANGE = 420f;
+    private static final float FLYING_SLASHER_ENGAGE_Y_RANGE = 210f;
+    private static final float FLYING_SLASHER_VERTICAL_SPEED = 116f;
     private static final float PAUSE_MENU_WIDTH = 360f;
     private static final float PAUSE_BUTTON_HEIGHT = 54f;
     private static final float PAUSE_BUTTON_GAP = 14f;
@@ -193,12 +204,14 @@ public class FirstScreen implements Screen {
     private Texture shantyFogTexture;
     private Texture bossTexture;
     private Texture flyingEnemyTexture;
+    private Texture flyingSlasherTexture;
     private Texture flyingEnemyProjectileTexture;
     private Texture[] bedroomTvStaticFrames;
     private final EnumMap<WeaponType, Texture> weaponIconTextures = new EnumMap<WeaponType, Texture>(WeaponType.class);
     private final EnumSet<WeaponType> missingWeaponIconTextures = EnumSet.noneOf(WeaponType.class);
     private TextureRegion[] heroFrames;
     private TextureRegion[] flyingEnemyFrames;
+    private TextureRegion[] flyingSlasherFrames;
     private final MetroHorrorGame game;
     private final int loadSlot;
     private final Rectangle[] pauseButtonBounds = new Rectangle[5];
@@ -1527,6 +1540,8 @@ public class FirstScreen implements Screen {
 
             if (enemy.isFlyingShooter()) {
                 updateFlyingEnemyAi(enemy, delta);
+            } else if (enemy.isFlyingSlasher()) {
+                updateFlyingSlasherAi(enemy, delta);
             } else {
                 resolveEnemyGrounding(enemy);
                 updateEnemyAi(enemy, delta);
@@ -1586,6 +1601,69 @@ public class FirstScreen implements Screen {
         if (canSeePlayer && enemy.canAttack() && player.isAlive()) {
             spawnFlyingEnemyProjectile(enemy, playerCenterX, playerCenterY);
             enemy.triggerAttack();
+        }
+    }
+
+    private void updateFlyingSlasherAi(Enemy enemy, float delta) {
+        float playerCenterX = player.getBounds().x + player.getBounds().width / 2f;
+        float playerCenterY = player.getBounds().y + player.getBounds().height / 2f;
+        float enemyCenterX = enemy.getBounds().x + enemy.getBounds().width / 2f;
+        float enemyCenterY = enemy.getBounds().y + enemy.getBounds().height / 2f;
+        float dx = playerCenterX - enemyCenterX;
+        float dy = playerCenterY - enemyCenterY;
+        float absDx = Math.abs(dx);
+        float absDy = Math.abs(dy);
+        boolean canSeePlayer = absDx < FLYING_SLASHER_ENGAGE_X_RANGE && absDy < FLYING_SLASHER_ENGAGE_Y_RANGE;
+
+        if (enemy.shouldPickNewDecision()) {
+            float direction = MathUtils.randomBoolean() ? 1f : -1f;
+            enemy.pickDecision(MathUtils.random(0.45f, 0.95f), direction);
+        }
+
+        if (canSeePlayer) {
+            enemy.noticePlayer(delta * 1.25f);
+            enemy.face(playerCenterX);
+        } else {
+            enemy.calmDown(delta * 0.7f);
+        }
+
+        float hoverTargetY = enemy.getHoverBaseY()
+                + MathUtils.sin(time * 2.9f + enemy.getHomeX() * 0.014f) * enemy.getHoverAmplitude();
+        if (canSeePlayer) {
+            hoverTargetY = MathUtils.lerp(hoverTargetY, playerCenterY + 18f, 0.55f);
+        }
+
+        if (canSeePlayer) {
+            float diveSpeed = enemy.getSpeed() * (0.70f + enemy.getAlertness() * 0.55f);
+            if (absDx > enemy.getAttackRange() + 18f) {
+                enemy.moveToward(playerCenterX, diveSpeed, delta);
+            } else {
+                enemy.moveBy(enemy.getStrafeDirection() * enemy.getSpeed() * 0.18f * delta);
+            }
+        } else {
+            float patrolTarget = enemy.getHomeX() + MathUtils.sin(time * 1.6f + enemy.getHomeX() * 0.018f) * 118f;
+            enemy.moveToward(patrolTarget, enemy.getSpeed() * 0.34f, delta);
+        }
+
+        if (enemy.isAttacking()) {
+            enemy.moveToward(playerCenterX, enemy.getSpeed() * 1.15f, delta);
+            hoverTargetY = MathUtils.lerp(hoverTargetY, playerCenterY - 6f, 0.7f);
+        }
+
+        enemy.moveTowardY(hoverTargetY, FLYING_SLASHER_VERTICAL_SPEED, delta);
+        enemy.clampX(STREET_ENEMY_MIN_X, STREET_ENEMY_MAX_X);
+        enemy.clampY(Constants.GROUND_Y + 120f, Constants.WORLD_HEIGHT - 150f);
+        applyEnemySeparation(enemy, delta);
+
+        boolean inSlashRange = absDx <= enemy.getAttackRange() + 12f && absDy <= 56f;
+        if (canSeePlayer && inSlashRange && enemy.canAttack() && player.isAlive()) {
+            enemy.triggerAttack();
+            enemy.moveToward(playerCenterX, enemy.getSpeed() * 1.35f, delta);
+            if (player.registerParrySuccess()) {
+                enemy.moveBy(dx > 0f ? -96f : 96f);
+            } else {
+                player.takeDamage(enemy.getDamage());
+            }
         }
     }
 
@@ -1660,7 +1738,9 @@ public class FirstScreen implements Screen {
             float otherCenterX = other.getBounds().x + other.getBounds().width / 2f;
             float distance = enemyCenterX - otherCenterX;
             float absDistance = Math.abs(distance);
-            float minimumDistance = enemy.isFlyingShooter() || other.isFlyingShooter() ? 90f : 58f;
+            float minimumDistance = enemy.isFlyingShooter() || other.isFlyingShooter()
+                    || enemy.isFlyingSlasher() || other.isFlyingSlasher()
+                    ? 90f : 58f;
             if (absDistance > 0f && absDistance < minimumDistance) {
                 push += Math.signum(distance) * (minimumDistance - absDistance);
             }
@@ -1773,8 +1853,10 @@ public class FirstScreen implements Screen {
         dungeonEnemies.clear();
         enemyProjectiles.clear();
         dungeonEnemies.add(Enemy.createFlyingShooter(980f, groundY + 240f + SHANTY_ENEMY_VERTICAL_OFFSET));
+        dungeonEnemies.add(Enemy.createFlyingSlasher(1110f, groundY + 206f + SHANTY_ENEMY_VERTICAL_OFFSET));
         dungeonEnemies.add(Enemy.createFlyingShooter(1280f, groundY + 280f + SHANTY_ENEMY_VERTICAL_OFFSET));
         dungeonEnemies.add(Enemy.createFlyingShooter(1560f, groundY + 300f + SHANTY_ENEMY_VERTICAL_OFFSET));
+        dungeonEnemies.add(Enemy.createFlyingSlasher(1960f, groundY + 224f + SHANTY_ENEMY_VERTICAL_OFFSET));
         dungeonEnemies.add(Enemy.createFlyingShooter(2260f, groundY + 260f + SHANTY_ENEMY_VERTICAL_OFFSET));
         dungeonEnemies.add(Enemy.createFlyingShooter(2620f, groundY + 320f + SHANTY_ENEMY_VERTICAL_OFFSET));
     }
@@ -1819,7 +1901,7 @@ public class FirstScreen implements Screen {
 
     private void renderDungeonEnemies() {
         for (Enemy enemy : dungeonEnemies) {
-            if (!enemy.isAlive() || enemy.isFlyingShooter()) {
+            if (!enemy.isAlive() || enemy.isFlyingShooter() || enemy.isFlyingSlasher()) {
                 continue;
             }
             renderHumanEnemy(enemy);
@@ -1827,37 +1909,67 @@ public class FirstScreen implements Screen {
     }
 
     private void renderDungeonEnemySprites() {
-        if (locationIndex != ShantyLocation.INDEX || flyingEnemyTexture == null || flyingEnemyFrames == null) {
+        if (locationIndex != ShantyLocation.INDEX) {
             return;
         }
 
         for (Enemy enemy : dungeonEnemies) {
-            if (!enemy.isAlive() || !enemy.isFlyingShooter()) {
+            if (!enemy.isAlive()) {
                 continue;
             }
 
-            int frameIndex = ((int)(time * FLYING_ENEMY_FLAP_SPEED + enemy.getHomeX() * 0.01f)) % flyingEnemyFrames.length;
-            TextureRegion frame = flyingEnemyFrames[frameIndex];
             float hitFlash = enemy.isRecentlyDamaged()
                     ? MathUtils.clamp(enemy.getDamageFlashTimer() / 0.22f, 0f, 1f)
                     : 0f;
-            float pulse = 0.94f + 0.06f * MathUtils.sin(time * 7f + enemy.getHomeX() * 0.02f);
-            float drawWidth = FLYING_ENEMY_DRAW_WIDTH * (0.98f + 0.03f * MathUtils.sin(time * 6f + enemy.getX() * 0.02f));
-            float drawHeight = FLYING_ENEMY_DRAW_HEIGHT * pulse;
-            float drawX = enemy.getBounds().x + enemy.getBounds().width * 0.5f - drawWidth * 0.5f;
-            float drawY = enemy.getBounds().y + enemy.getBounds().height * 0.5f - drawHeight * 0.5f + 6f;
-            batch.setColor(1f, 1f - hitFlash * 0.45f, 1f - hitFlash * 0.55f, 1f);
-            batch.draw(frame.getTexture(),
-                    drawX,
-                    drawY,
-                    drawWidth,
-                    drawHeight,
-                    frame.getRegionX(),
-                    frame.getRegionY(),
-                    frame.getRegionWidth(),
-                    frame.getRegionHeight(),
-                    !enemy.isFacingRight(),
-                    false);
+            if (enemy.isFlyingShooter() && flyingEnemyFrames != null) {
+                int frameIndex = ((int)(time * FLYING_ENEMY_FLAP_SPEED + enemy.getHomeX() * 0.01f)) % flyingEnemyFrames.length;
+                TextureRegion frame = flyingEnemyFrames[frameIndex];
+                float pulse = 0.94f + 0.06f * MathUtils.sin(time * 7f + enemy.getHomeX() * 0.02f);
+                float drawWidth = FLYING_ENEMY_DRAW_WIDTH * (0.98f + 0.03f * MathUtils.sin(time * 6f + enemy.getX() * 0.02f));
+                float drawHeight = FLYING_ENEMY_DRAW_HEIGHT * pulse;
+                float drawX = enemy.getBounds().x + enemy.getBounds().width * 0.5f - drawWidth * 0.5f;
+                float drawY = enemy.getBounds().y + enemy.getBounds().height * 0.5f - drawHeight * 0.5f + 6f;
+                batch.setColor(1f, 1f - hitFlash * 0.45f, 1f - hitFlash * 0.55f, 1f);
+                batch.draw(frame.getTexture(),
+                        drawX,
+                        drawY,
+                        drawWidth,
+                        drawHeight,
+                        frame.getRegionX(),
+                        frame.getRegionY(),
+                        frame.getRegionWidth(),
+                        frame.getRegionHeight(),
+                        !enemy.isFacingRight(),
+                        false);
+            } else if (enemy.isFlyingSlasher() && flyingSlasherFrames != null) {
+                int idleFrameOffset = ((int)(time * FLYING_SLASHER_IDLE_ANIM_SPEED + enemy.getHomeX() * 0.01f))
+                        % FLYING_SLASHER_IDLE_FRAMES.length;
+                int frameIndex = FLYING_SLASHER_IDLE_FRAMES[idleFrameOffset];
+                if (enemy.isAttacking()) {
+                    frameIndex = Math.min(
+                            flyingSlasherFrames.length - 1,
+                            (int)(enemy.getAttackProgress() * flyingSlasherFrames.length));
+                }
+                TextureRegion frame = flyingSlasherFrames[frameIndex];
+                float pulse = 0.92f + 0.08f * MathUtils.sin(time * 8.4f + enemy.getHomeX() * 0.025f);
+                float attackStretch = enemy.isAttacking() ? 1.08f : 1f;
+                float drawWidth = FLYING_SLASHER_DRAW_WIDTH * pulse * attackStretch;
+                float drawHeight = FLYING_SLASHER_DRAW_HEIGHT * (1.02f - pulse * 0.06f);
+                float drawX = enemy.getBounds().x + enemy.getBounds().width * 0.5f - drawWidth * 0.5f;
+                float drawY = enemy.getBounds().y + enemy.getBounds().height * 0.5f - drawHeight * 0.5f + 4f;
+                batch.setColor(1f, 1f - hitFlash * 0.40f, 1f - hitFlash * 0.52f, 1f);
+                batch.draw(frame.getTexture(),
+                        drawX,
+                        drawY,
+                        drawWidth,
+                        drawHeight,
+                        frame.getRegionX(),
+                        frame.getRegionY(),
+                        frame.getRegionWidth(),
+                        frame.getRegionHeight(),
+                        !enemy.isFacingRight(),
+                        false);
+            }
         }
 
         batch.setColor(Color.WHITE);
@@ -2461,10 +2573,78 @@ public class FirstScreen implements Screen {
             }
         }
 
+        if (Gdx.files.internal(FLYING_SLASHER_ASSET).exists()) {
+            flyingSlasherTexture = new Texture(Gdx.files.internal(FLYING_SLASHER_ASSET));
+        } else {
+            flyingSlasherTexture = createFlyingSlasherFallbackTexture();
+        }
+        if (flyingSlasherTexture != null) {
+            flyingSlasherTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            flyingSlasherFrames = new TextureRegion[FLYING_SLASHER_FRAME_COUNT];
+            int slasherFrameWidth = flyingSlasherTexture.getWidth() / FLYING_SLASHER_FRAME_COUNT;
+            int slasherFrameHeight = flyingSlasherTexture.getHeight();
+            for (int i = 0; i < FLYING_SLASHER_FRAME_COUNT; i++) {
+                flyingSlasherFrames[i] = new TextureRegion(
+                        flyingSlasherTexture,
+                        i * slasherFrameWidth,
+                        0,
+                        slasherFrameWidth,
+                        slasherFrameHeight);
+            }
+        }
+
         if (Gdx.files.internal(FLYING_ENEMY_PROJECTILE_ASSET).exists()) {
             flyingEnemyProjectileTexture = new Texture(Gdx.files.internal(FLYING_ENEMY_PROJECTILE_ASSET));
             flyingEnemyProjectileTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         }
+    }
+
+    private Texture createFlyingSlasherFallbackTexture() {
+        Pixmap pixmap = new Pixmap(FLYING_SLASHER_FRAME_WIDTH * FLYING_SLASHER_FRAME_COUNT, FLYING_SLASHER_FRAME_HEIGHT, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0f, 0f, 0f, 0f);
+        pixmap.fill();
+
+        for (int frame = 0; frame < FLYING_SLASHER_FRAME_COUNT; frame++) {
+            int offsetX = frame * FLYING_SLASHER_FRAME_WIDTH;
+            int sway = frame == 0 ? -18 : frame == 1 ? 6 : frame == 2 ? 20 : 4;
+            int slashLift = frame == 0 ? 30 : frame == 1 ? -8 : frame == 2 ? -18 : 16;
+
+            pixmap.setColor(0.08f, 0.02f, 0.03f, 0.32f);
+            pixmap.fillCircle(offsetX + 92, 58, 30 + frame * 2);
+            pixmap.setColor(0.12f, 0.02f, 0.03f, 0.50f);
+            pixmap.fillTriangle(offsetX + 72 + sway, 78, offsetX + 118 + sway, 74, offsetX + 96 + sway, 18);
+
+            pixmap.setColor(0.08f, 0.02f, 0.03f, 0.96f);
+            pixmap.fillCircle(offsetX + 92 + sway, 102, 18);
+            pixmap.fillTriangle(offsetX + 86 + sway, 94, offsetX + 128 + sway, 118, offsetX + 92 + sway, 34);
+            pixmap.fillTriangle(offsetX + 102 + sway, 96, offsetX + 74 + sway, 132, offsetX + 92 + sway, 40);
+            pixmap.fillTriangle(offsetX + 98 + sway, 88, offsetX + 146 + sway, 74, offsetX + 116 + sway, 30);
+            pixmap.fillTriangle(offsetX + 90 + sway, 86, offsetX + 52 + sway, 72, offsetX + 74 + sway, 28);
+
+            pixmap.setColor(0.18f, 0.03f, 0.05f, 0.98f);
+            pixmap.fillRectangle(offsetX + 87 + sway, 62, 10, 42);
+            pixmap.fillTriangle(offsetX + 92 + sway, 70, offsetX + 78 + sway, 40, offsetX + 84 + sway, 66);
+            pixmap.fillTriangle(offsetX + 96 + sway, 70, offsetX + 110 + sway, 40, offsetX + 100 + sway, 64);
+
+            pixmap.setColor(0.34f, 0.02f, 0.04f, 1f);
+            pixmap.fillCircle(offsetX + 102 + sway, 112, 6);
+            pixmap.fillCircle(offsetX + 82 + sway, 112, 4);
+
+            pixmap.setColor(0.86f, 0.10f, 0.14f, 0.88f);
+            pixmap.fillTriangle(offsetX + 96 + sway, 100 + slashLift, offsetX + 164 + sway, 126 + slashLift, offsetX + 126 + sway, 34 + slashLift);
+            pixmap.setColor(1f, 0.26f, 0.20f, 0.92f);
+            pixmap.drawLine(offsetX + 98 + sway, 100 + slashLift, offsetX + 156 + sway, 120 + slashLift);
+            pixmap.drawLine(offsetX + 100 + sway, 96 + slashLift, offsetX + 146 + sway, 58 + slashLift);
+            pixmap.drawLine(offsetX + 102 + sway, 92 + slashLift, offsetX + 134 + sway, 36 + slashLift);
+
+            pixmap.setColor(0.96f, 0.88f, 0.86f, 0.82f);
+            pixmap.fillCircle(offsetX + 92 + sway, 106, 2);
+            pixmap.fillCircle(offsetX + 100 + sway, 104, 2);
+        }
+
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        return texture;
     }
 
     private void startNewGameInBedroom() {
@@ -3730,6 +3910,9 @@ public class FirstScreen implements Screen {
         }
         if (flyingEnemyTexture != null) {
             flyingEnemyTexture.dispose();
+        }
+        if (flyingSlasherTexture != null) {
+            flyingSlasherTexture.dispose();
         }
         if (flyingEnemyProjectileTexture != null) {
             flyingEnemyProjectileTexture.dispose();
