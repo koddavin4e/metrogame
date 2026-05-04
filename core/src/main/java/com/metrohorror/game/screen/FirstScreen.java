@@ -121,10 +121,13 @@ public class FirstScreen implements Screen {
     private static final float KNIFE_PICKUP_PROMPT_RANGE = 84f;
     private static final float TYPE_SPEED = 42f;
     private static final int KNIFE_DAMAGE = 2;
+    private static final int HIT_HEAL_AMOUNT = 1;
     private static final int KILL_HEAL_AMOUNT = 5;
     private static final float KNIFE_FORWARD_RANGE_BONUS = 28f;
     private static final float DOWN_ATTACK_BOUNCE = 520f;
     private static final float RESPAWN_X_OFFSET = 120f;
+    private static final float SHANTY_ENEMY_VERTICAL_OFFSET = -168f;
+    private static final float DAMAGE_TEXT_LIFETIME = 0.72f;
     private static final String FLYING_ENEMY_ASSET = "enemy_bat_sheet.png";
     private static final String FLYING_ENEMY_PROJECTILE_ASSET = "enemy_bat_projectile.png";
     private static final int[] FLYING_ENEMY_FRAME_X = {8, 160, 308, 453, 608};
@@ -204,6 +207,7 @@ public class FirstScreen implements Screen {
     private Player player;
     private Array<Enemy> dungeonEnemies;
     private Array<EnemyProjectile> enemyProjectiles;
+    private Array<FloatingDamageText> floatingDamageTexts;
     private FinalBoss finalBoss;
     private GameMap baseMap;
     private GameMap dungeonMap;
@@ -230,6 +234,7 @@ public class FirstScreen implements Screen {
     private boolean engineIntroSeen;
     private boolean doorLockedUntilPlayerMoves;
     private boolean watchedBedroomTv;
+    private boolean shantyCleared;
     private boolean tvScreenVisible;
     private boolean pauseMenuVisible;
     private int hoveredPauseButton = -1;
@@ -288,6 +293,7 @@ public class FirstScreen implements Screen {
         player.healToFull();
         dungeonEnemies = new Array<>();
         enemyProjectiles = new Array<>();
+        floatingDamageTexts = new Array<>();
         baseMap = new GameMap();
         dungeonMap = new DungeonMap();
         gameMap = baseMap;
@@ -341,6 +347,7 @@ public class FirstScreen implements Screen {
             renderDungeonEnemySprites();
             renderPlayerSprite();
             renderEnemyProjectiles();
+            renderFloatingDamageTexts();
             batch.end();
 
             Gdx.gl.glEnable(GL20.GL_BLEND);
@@ -406,6 +413,7 @@ public class FirstScreen implements Screen {
         }
 
         knifeSwingTimer = Math.max(0f, knifeSwingTimer - delta);
+        updateFloatingDamageTexts(delta);
         if (dialogueVisible) {
             dialogueTypeTimer += delta;
         }
@@ -731,6 +739,7 @@ public class FirstScreen implements Screen {
         preferences.putInteger(prefix + "health", player.getHealth());
         preferences.putBoolean(prefix + "knifeCollected", knifeCollected);
         preferences.putBoolean(prefix + "watchedBedroomTv", watchedBedroomTv);
+        preferences.putBoolean(prefix + "shantyCleared", shantyCleared);
         preferences.putBoolean(prefix + "chapelIntroSeen", chapelIntroSeen);
         preferences.putBoolean(prefix + "engineIntroSeen", engineIntroSeen);
         preferences.putBoolean(prefix + "prologueActive", prologueActive);
@@ -755,6 +764,7 @@ public class FirstScreen implements Screen {
 
         knifeCollected = preferences.getBoolean(prefix + "knifeCollected", false);
         watchedBedroomTv = preferences.getBoolean(prefix + "watchedBedroomTv", false);
+        shantyCleared = preferences.getBoolean(prefix + "shantyCleared", false);
         tvScreenVisible = false;
         tvWatchTimer = watchedBedroomTv ? TV_REQUIRED_WATCH_TIME : 0f;
         chapelIntroSeen = preferences.getBoolean(prefix + "chapelIntroSeen", false);
@@ -776,6 +786,16 @@ public class FirstScreen implements Screen {
         inventoryVisible = false;
         knifeSwingTimer = 0f;
         knifeDamageApplied = false;
+        floatingDamageTexts.clear();
+        if (locationIndex == ShantyLocation.INDEX) {
+            prepareShantyEncounter(false);
+        } else {
+            dungeonEnemies.clear();
+            enemyProjectiles.clear();
+        }
+        if (locationIndex == BossLocation.INDEX) {
+            ensureFinalBossSpawned();
+        }
         camera.position.x = player.getX();
         camera.update();
         clampCameraToCurrentLocation();
@@ -946,7 +966,7 @@ public class FirstScreen implements Screen {
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         doorLockedUntilPlayerMoves = true;
-        if (locationIndex == 3) {
+        if (locationIndex == ShantyLocation.INDEX) {
             spawnDungeonEnemies();
         } else {
             enemyProjectiles.clear();
@@ -963,12 +983,14 @@ public class FirstScreen implements Screen {
         float visualMarginX = getPlayerVisualMarginX();
         if (locationIndex == 3 && player.getX() >= STREET_TO_SHANTY_THRESHOLD - visualMarginX) {
             enterShantyLocation();
-        } else if (locationIndex == ShantyLocation.INDEX && player.getX() <= SHANTY_LEFT_WALL + visualMarginX) {
+        } else if (locationIndex == ShantyLocation.INDEX
+                && !hasAliveDungeonEnemies()
+                && player.getX() <= SHANTY_LEFT_WALL + visualMarginX) {
             returnToStreetFromShanty();
-        } else if (locationIndex == ShantyLocation.INDEX && player.getX() >= SHANTY_TO_BOSS_THRESHOLD - visualMarginX) {
+        } else if (locationIndex == ShantyLocation.INDEX
+                && !hasAliveDungeonEnemies()
+                && player.getX() >= SHANTY_TO_BOSS_THRESHOLD - visualMarginX) {
             enterBossLocation();
-        } else if (locationIndex == BossLocation.INDEX && player.getX() <= BOSS_LEFT_WALL + visualMarginX) {
-            returnToShantyFromBoss();
         }
     }
 
@@ -999,7 +1021,7 @@ public class FirstScreen implements Screen {
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         doorLockedUntilPlayerMoves = false;
-        enemyProjectiles.clear();
+        prepareShantyEncounter(false);
         player.setX(SHANTY_PLAYER_ENTRY_X);
         player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
@@ -1015,7 +1037,8 @@ public class FirstScreen implements Screen {
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         doorLockedUntilPlayerMoves = false;
-        spawnDungeonEnemies();
+        dungeonEnemies.clear();
+        enemyProjectiles.clear();
         player.setX(SHANTY_PLAYER_RETURN_X);
         player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
@@ -1031,6 +1054,8 @@ public class FirstScreen implements Screen {
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         doorLockedUntilPlayerMoves = false;
+        dungeonEnemies.clear();
+        enemyProjectiles.clear();
         player.setX(BOSS_PLAYER_ENTRY_X);
         player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
@@ -1047,7 +1072,7 @@ public class FirstScreen implements Screen {
         dialogueTypeTimer = 0f;
         inventoryVisible = false;
         doorLockedUntilPlayerMoves = false;
-        enemyProjectiles.clear();
+        spawnDungeonEnemies();
         player.setX(SHANTY_PLAYER_BOSS_RETURN_X);
         player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
@@ -1057,7 +1082,7 @@ public class FirstScreen implements Screen {
     }
 
     private void updateCurrentLocationState(float delta) {
-        if (locationIndex == 3) {
+        if (locationIndex == ShantyLocation.INDEX) {
             updateDungeonEnemies(delta);
             updateEnemyProjectiles(delta);
             if (!player.isAlive()) {
@@ -1093,6 +1118,7 @@ public class FirstScreen implements Screen {
         player.setVelocityY(0f);
         knifeSwingTimer = 0f;
         knifeDamageApplied = false;
+        floatingDamageTexts.clear();
         ensureFinalBossSpawned();
         finalBoss.reset(FINAL_BOSS_SPAWN_X, FINAL_BOSS_SPAWN_Y);
         camera.position.x = player.getX();
@@ -1288,7 +1314,7 @@ public class FirstScreen implements Screen {
 
     private void renderWorldActors() {
         // Draw shape-based actors after textured backgrounds so they are not hidden behind them.
-        if (locationIndex == 3) {
+        if (locationIndex == ShantyLocation.INDEX) {
             renderDungeonEnemies();
             renderEnemyProjectileGlow();
         }
@@ -1336,12 +1362,16 @@ public class FirstScreen implements Screen {
         float range = weapon == null ? 68f : weapon.getRange() + 18f;
         Rectangle playerBounds = player.getBounds();
         if (attackDirection == AttackDirection.UP) {
-            return new Rectangle(playerBounds.x - 10f, playerBounds.y + playerBounds.height - 4f,
-                    playerBounds.width + 20f, range);
+            float width = playerBounds.width + 42f;
+            float x = playerBounds.x - 6f + (player.isFacingRight() ? 18f : -18f);
+            return new Rectangle(x, playerBounds.y + playerBounds.height + 4f,
+                    width, range + 40f);
         }
         if (attackDirection == AttackDirection.DOWN) {
-            return new Rectangle(playerBounds.x - 10f, playerBounds.y - range + 8f,
-                    playerBounds.width + 20f, range);
+            float width = playerBounds.width + 52f;
+            float x = playerBounds.x - 20f + (player.isFacingRight() ? 10f : -10f);
+            return new Rectangle(x, playerBounds.y - range - 18f,
+                    width, range + 42f);
         }
 
         float width = range + KNIFE_FORWARD_RANGE_BONUS;
@@ -1366,7 +1396,12 @@ public class FirstScreen implements Screen {
         for (int i = 0; i < dungeonEnemies.size; i++) {
             Enemy enemy = dungeonEnemies.get(i);
             if (enemy.isAlive() && attackBounds.overlaps(enemy.getBounds())) {
-                enemy.takeDamage(Math.max(KNIFE_DAMAGE, weapon.getDamage()));
+                int damage = Math.max(KNIFE_DAMAGE, weapon.getDamage());
+                enemy.takeDamage(damage);
+                player.heal(HIT_HEAL_AMOUNT);
+                spawnDamageText(enemy.getBounds().x + enemy.getBounds().width * 0.5f,
+                        enemy.getBounds().y + enemy.getBounds().height * 0.76f,
+                        damage, false);
                 rewardEnemyKill(enemy);
                 if (attackDirection == AttackDirection.DOWN) {
                     player.bounceFromDownAttack(DOWN_ATTACK_BOUNCE);
@@ -1382,6 +1417,9 @@ public class FirstScreen implements Screen {
             // Any top-side attack pressure is absorbed by the head and never converts into damage.
             if (attackingFromAbove || ((attackDirection == AttackDirection.UP || attackDirection == AttackDirection.DOWN) && attackBounds.overlaps(bossHeadBounds))) {
                 finalBoss.absorbHeadPressure(player, weapon.getSwingDuration(), BOSS_LEFT_WALL, BOSS_RIGHT_WALL);
+                if (attackDirection == AttackDirection.DOWN) {
+                    player.bounceFromDownAttack(DOWN_ATTACK_BOUNCE);
+                }
                 knifeDamageApplied = true;
                 return;
             }
@@ -1390,7 +1428,12 @@ public class FirstScreen implements Screen {
                 knifeDamageApplied = true;
                 return;
             }
-            finalBoss.takeDamage(Math.max(KNIFE_DAMAGE, weapon.getDamage()));
+            int damage = Math.max(KNIFE_DAMAGE, weapon.getDamage());
+            finalBoss.takeDamage(damage);
+            player.heal(HIT_HEAL_AMOUNT);
+            spawnDamageText(finalBoss.getBounds().x + finalBoss.getBounds().width * 0.5f,
+                    finalBoss.getBounds().y + finalBoss.getBounds().height * 0.82f,
+                    damage, true);
             if (!finalBoss.isAlive()) {
                 player.heal(KILL_HEAL_AMOUNT);
             }
@@ -1405,7 +1448,73 @@ public class FirstScreen implements Screen {
         if (!enemy.isAlive() && !enemy.isLootDropped()) {
             player.heal(KILL_HEAL_AMOUNT);
             enemy.markLootDropped();
+            if (locationIndex == ShantyLocation.INDEX && !hasAliveDungeonEnemies()) {
+                shantyCleared = true;
+                enemyProjectiles.clear();
+            }
         }
+    }
+
+    private boolean hasAliveDungeonEnemies() {
+        for (Enemy enemy : dungeonEnemies) {
+            if (enemy.isAlive()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void prepareShantyEncounter(boolean forceRespawn) {
+        if (shantyCleared) {
+            dungeonEnemies.clear();
+            enemyProjectiles.clear();
+            return;
+        }
+
+        if (forceRespawn || dungeonEnemies.size == 0) {
+            spawnDungeonEnemies();
+        }
+    }
+
+    private void spawnDamageText(float x, float y, int damage, boolean critical) {
+        if (damage <= 0) {
+            return;
+        }
+        floatingDamageTexts.add(new FloatingDamageText(x, y, damage, critical, floatingDamageTexts.size));
+    }
+
+    private void updateFloatingDamageTexts(float delta) {
+        for (int i = floatingDamageTexts.size - 1; i >= 0; i--) {
+            FloatingDamageText text = floatingDamageTexts.get(i);
+            text.update(delta);
+            if (text.isFinished()) {
+                floatingDamageTexts.removeIndex(i);
+            }
+        }
+    }
+
+    private void renderFloatingDamageTexts() {
+        if (floatingDamageTexts.size == 0) {
+            return;
+        }
+
+        float previousScaleX = font.getData().scaleX;
+        float previousScaleY = font.getData().scaleY;
+        for (FloatingDamageText text : floatingDamageTexts) {
+            float alpha = text.getAlpha();
+            float scale = text.critical ? 1.02f + text.getPop() * 0.34f : 0.88f + text.getPop() * 0.24f;
+            font.getData().setScale(scale);
+            font.setColor(0.03f, 0.03f, 0.05f, alpha * 0.95f);
+            font.draw(batch, text.value, text.x - 12f * scale + 2f, text.y + 2f);
+            if (text.critical) {
+                font.setColor(1f, 0.96f, 0.76f, alpha);
+            } else {
+                font.setColor(0.82f, 0.98f, 1f, alpha);
+            }
+            font.draw(batch, text.value, text.x - 12f * scale, text.y);
+        }
+        font.getData().setScale(previousScaleX, previousScaleY);
+        font.setColor(1f, 1f, 1f, 1f);
     }
 
     private void updateDungeonEnemies(float delta) {
@@ -1471,7 +1580,7 @@ public class FirstScreen implements Screen {
 
         enemy.moveTowardY(hoverTargetY, FLYING_ENEMY_VERTICAL_SPEED, delta);
         enemy.clampX(STREET_ENEMY_MIN_X, STREET_ENEMY_MAX_X);
-        enemy.clampY(Constants.GROUND_Y + 190f, Constants.WORLD_HEIGHT - 160f);
+        enemy.clampY(Constants.GROUND_Y + 120f, Constants.WORLD_HEIGHT - 160f);
         applyEnemySeparation(enemy, delta);
 
         if (canSeePlayer && enemy.canAttack() && player.isAlive()) {
@@ -1519,7 +1628,11 @@ public class FirstScreen implements Screen {
             }
 
             applyEnemySeparation(enemy, delta);
-            enemy.clampX(STREET_RETURN_DOOR.x + 115f, Constants.WORLD_WIDTH - 120f);
+            if (locationIndex == ShantyLocation.INDEX) {
+                enemy.clampX(SHANTY_LEFT_WALL + 120f, SHANTY_RIGHT_WALL - 120f);
+            } else {
+                enemy.clampX(STREET_RETURN_DOOR.x + 115f, Constants.WORLD_WIDTH - 120f);
+            }
 
             if (closeEnoughOnY && absDx <= enemy.getAttackRange() + 14f && enemy.canAttack() && player.isAlive()) {
                 enemy.triggerAttack();
@@ -1583,7 +1696,12 @@ public class FirstScreen implements Screen {
                 boolean hitEnemy = false;
                 for (Enemy enemy : dungeonEnemies) {
                     if (enemy.isAlive() && projectile.bounds.overlaps(enemy.getBounds())) {
-                        enemy.takeDamage(Math.max(4, projectile.damage));
+                        int damage = Math.max(4, projectile.damage);
+                        enemy.takeDamage(damage);
+                        spawnDamageText(enemy.getBounds().x + enemy.getBounds().width * 0.5f,
+                                enemy.getBounds().y + enemy.getBounds().height * 0.74f,
+                                damage, false);
+                        rewardEnemyKill(enemy);
                         enemyProjectiles.removeIndex(i);
                         hitEnemy = true;
                         break;
@@ -1654,20 +1772,27 @@ public class FirstScreen implements Screen {
         float groundY = Constants.GROUND_Y + Constants.GROUND_HEIGHT;
         dungeonEnemies.clear();
         enemyProjectiles.clear();
-        dungeonEnemies.add(Enemy.createFlyingShooter(980f, groundY + 240f));
-        dungeonEnemies.add(Enemy.createFlyingShooter(1560f, groundY + 300f));
-        dungeonEnemies.add(Enemy.createFlyingShooter(2260f, groundY + 260f));
+        dungeonEnemies.add(Enemy.createFlyingShooter(980f, groundY + 240f + SHANTY_ENEMY_VERTICAL_OFFSET));
+        dungeonEnemies.add(Enemy.createFlyingShooter(1280f, groundY + 280f + SHANTY_ENEMY_VERTICAL_OFFSET));
+        dungeonEnemies.add(Enemy.createFlyingShooter(1560f, groundY + 300f + SHANTY_ENEMY_VERTICAL_OFFSET));
+        dungeonEnemies.add(Enemy.createFlyingShooter(2260f, groundY + 260f + SHANTY_ENEMY_VERTICAL_OFFSET));
+        dungeonEnemies.add(Enemy.createFlyingShooter(2620f, groundY + 320f + SHANTY_ENEMY_VERTICAL_OFFSET));
     }
 
     private void respawnAtCurrentDoor() {
         player.healToFull();
-        player.setX(STREET_RETURN_DOOR.x + RESPAWN_X_OFFSET);
+        if (locationIndex == ShantyLocation.INDEX) {
+            player.setX(SHANTY_PLAYER_ENTRY_X);
+        } else {
+            player.setX(STREET_RETURN_DOOR.x + RESPAWN_X_OFFSET);
+        }
         player.setY(getCurrentGroundTop());
         player.setVelocityY(0f);
         knifeSwingTimer = 0f;
         knifeDamageApplied = false;
+        floatingDamageTexts.clear();
         enemyProjectiles.clear();
-        spawnDungeonEnemies();
+        prepareShantyEncounter(true);
         camera.position.x = player.getX();
         camera.update();
     }
@@ -1702,7 +1827,7 @@ public class FirstScreen implements Screen {
     }
 
     private void renderDungeonEnemySprites() {
-        if (locationIndex != 3 || flyingEnemyTexture == null || flyingEnemyFrames == null) {
+        if (locationIndex != ShantyLocation.INDEX || flyingEnemyTexture == null || flyingEnemyFrames == null) {
             return;
         }
 
@@ -1739,7 +1864,7 @@ public class FirstScreen implements Screen {
     }
 
     private void renderEnemyProjectiles() {
-        if (locationIndex != 3 || flyingEnemyProjectileTexture == null) {
+        if (locationIndex != ShantyLocation.INDEX || flyingEnemyProjectileTexture == null) {
             return;
         }
 
@@ -1857,70 +1982,10 @@ public class FirstScreen implements Screen {
         float fade = MathUtils.sin(progress * MathUtils.PI);
 
         if (attackDirection == AttackDirection.UP) {
-            // Rotate the side slash 90 degrees so the upward hit reads like the same effect.
-            float arcCenterX = centerX + dir * 30f;
-            float arcCenterY = centerY + 42f;
-            float startX = arcCenterX - 24f;
-            float startY = centerY + 10f;
-            float endX = arcCenterX + 24f;
-            float endY = centerY + range + 60f;
-            float previousX = 0f;
-            float previousY = 0f;
-
-            for (int i = 0; i <= 12; i++) {
-                float t = i / 12f;
-                float px = MathUtils.lerp(startX, endX, t);
-                float py = MathUtils.lerp(startY, endY, t);
-                if (i > 0) {
-                    shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
-                    shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
-                    shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
-                    shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
-                    shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
-                    shapeRenderer.rectLine(previousX + dir * 1.5f, previousY + 1.5f, px + dir * 1.5f, py + 1.5f, 2.8f);
-                }
-                previousX = px;
-                previousY = py;
-            }
-
-            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.42f * fade);
-            shapeRenderer.triangle(
-                    arcCenterX - 22f, centerY + 20f,
-                    arcCenterX + 22f, centerY + 20f,
-                    arcCenterX, centerY + range + 82f);
+            renderVerticalKnifeSlash(centerX + dir * 40f, centerY + 26f, centerY + range + 92f, fade, dir, false);
             return;
         } else if (attackDirection == AttackDirection.DOWN) {
-            // Mirror the upward version downward for the aerial slam slash.
-            float arcCenterX = centerX + dir * 30f;
-            float arcCenterY = player.getBounds().y + 4f;
-            float startX = arcCenterX - 24f;
-            float startY = centerY - 2f;
-            float endX = arcCenterX + 24f;
-            float endY = player.getBounds().y - range - 56f;
-            float previousX = 0f;
-            float previousY = 0f;
-
-            for (int i = 0; i <= 12; i++) {
-                float t = i / 12f;
-                float px = MathUtils.lerp(startX, endX, t);
-                float py = MathUtils.lerp(startY, endY, t);
-                if (i > 0) {
-                    shapeRenderer.setColor(0.02f, 0.28f, 0.34f, 0.44f * fade);
-                    shapeRenderer.rectLine(previousX, previousY, px, py, 14f);
-                    shapeRenderer.setColor(0.10f, 0.80f, 0.94f, 0.82f * fade);
-                    shapeRenderer.rectLine(previousX, previousY, px, py, 8f);
-                    shapeRenderer.setColor(0.78f, 0.98f, 1f, 0.94f * fade);
-                    shapeRenderer.rectLine(previousX + dir * 1.5f, previousY - 1.5f, px + dir * 1.5f, py - 1.5f, 2.8f);
-                }
-                previousX = px;
-                previousY = py;
-            }
-
-            shapeRenderer.setColor(0.70f, 0.96f, 1f, 0.42f * fade);
-            shapeRenderer.triangle(
-                    arcCenterX - 22f, centerY + 4f,
-                    arcCenterX + 22f, centerY + 4f,
-                    arcCenterX, player.getBounds().y - range - 78f);
+            renderVerticalKnifeSlash(centerX + dir * 30f, centerY - 10f, player.getBounds().y - range - 84f, fade, dir, true);
             return;
         } else {
             float arcCenterX = centerX + dir * 20f;
@@ -1956,6 +2021,41 @@ public class FirstScreen implements Screen {
                     arcCenterX + dir * 30f, arcCenterY + 26f);
             return;
         }
+    }
+
+    private void renderVerticalKnifeSlash(float originX, float startY, float endY, float fade, float dir, boolean downward) {
+        float previousX = 0f;
+        float previousY = 0f;
+        float sweep = downward ? -1f : 1f;
+        float slashLength = Math.abs(endY - startY);
+        float bodyAvoidance = downward ? 0f : 14f;
+
+        for (int i = 0; i <= 15; i++) {
+            float t = i / 15f;
+            float curve = MathUtils.sin(t * MathUtils.PI) * (18f + slashLength * 0.045f);
+            float px = originX + dir * (curve + MathUtils.lerp(-8f, 22f, t)) + dir * bodyAvoidance * (1f - t * 0.55f);
+            float py = MathUtils.lerp(startY, endY, t) + sweep * MathUtils.sin(t * MathUtils.PI * 1.5f) * 12f;
+            if (i > 0) {
+                float widthBoost = 1f - t * 0.35f;
+                shapeRenderer.setColor(0.01f, 0.18f, 0.24f, 0.28f * fade);
+                shapeRenderer.rectLine(previousX - dir * 5f, previousY, px - dir * 5f, py, 20f * widthBoost);
+                shapeRenderer.setColor(0.05f, 0.70f, 0.92f, 0.72f * fade);
+                shapeRenderer.rectLine(previousX, previousY, px, py, 11.5f * widthBoost);
+                shapeRenderer.setColor(0.80f, 0.99f, 1f, 0.98f * fade);
+                shapeRenderer.rectLine(previousX + dir * 1.8f, previousY + sweep * 1.2f, px + dir * 1.8f, py + sweep * 1.2f, 4f * widthBoost);
+            }
+            previousX = px;
+            previousY = py;
+        }
+
+        float flareY = downward ? startY - 12f : startY + 12f;
+        float tipY = downward ? endY - 24f : endY + 24f;
+        shapeRenderer.setColor(0.60f, 0.96f, 1f, 0.34f * fade);
+        shapeRenderer.triangle(originX - 22f, flareY, originX + 22f, flareY, originX + dir * 10f, tipY);
+
+        shapeRenderer.setColor(0.88f, 1f, 1f, 0.28f * fade);
+        shapeRenderer.rectLine(originX - dir * 10f, startY + sweep * 8f, originX + dir * 18f, endY - sweep * 18f, 2.4f);
+        shapeRenderer.rectLine(originX + dir * 14f, startY + sweep * 2f, originX - dir * 7f, endY - sweep * 26f, 1.8f);
     }
 
     private void renderParryEffect() {
@@ -2373,6 +2473,7 @@ public class FirstScreen implements Screen {
         prologueActive = false;
         dialogueVisible = false;
         watchedBedroomTv = false;
+        shantyCleared = false;
         enterBedroomAfterPrologue();
     }
 
@@ -3037,13 +3138,17 @@ public class FirstScreen implements Screen {
                 prompt = "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u041d\u0438\u0436\u043d\u0438\u0439 \u0433\u043e\u0440\u043e\u0434";
             }
             if (prompt == null && locationIndex == ShantyLocation.INDEX && player.getX() < SHANTY_LEFT_WALL + 180f) {
-                prompt = "\u0418\u0434\u0438 \u0432\u043b\u0435\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043d\u0430 \u0443\u043b\u0438\u0446\u0443";
+                prompt = hasAliveDungeonEnemies()
+                        ? "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0443\u0431\u0435\u0439 \u0432\u0441\u0435\u0445 \u0432\u0440\u0430\u0433\u043e\u0432"
+                        : "\u0418\u0434\u0438 \u0432\u043b\u0435\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u043d\u0430 \u0443\u043b\u0438\u0446\u0443";
             }
             if (prompt == null && locationIndex == ShantyLocation.INDEX && player.getX() > SHANTY_RIGHT_WALL - 180f) {
-                prompt = "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u043b\u0430\u0431\u043e\u0440\u0430\u0442\u043e\u0440\u0438\u044e";
+                prompt = hasAliveDungeonEnemies()
+                        ? "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0443\u0431\u0435\u0439 \u0432\u0441\u0435\u0445 \u0432\u0440\u0430\u0433\u043e\u0432"
+                        : "\u0418\u0434\u0438 \u0432\u043f\u0440\u0430\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u043e\u0439\u0442\u0438 \u0432 \u043b\u0430\u0431\u043e\u0440\u0430\u0442\u043e\u0440\u0438\u044e";
             }
             if (prompt == null && locationIndex == BossLocation.INDEX && player.getX() < BOSS_LEFT_WALL + 160f) {
-                prompt = "\u0418\u0434\u0438 \u0432\u043b\u0435\u0432\u043e, \u0447\u0442\u043e\u0431\u044b \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u041d\u0438\u0436\u043d\u0438\u0439 \u0433\u043e\u0440\u043e\u0434";
+                prompt = "\u041d\u0430\u0437\u0430\u0434 \u043f\u0443\u0442\u0438 \u043d\u0435\u0442";
             }
             if (prompt == null && (locationIndex == 1 || locationIndex == 2 || locationIndex == 3)) {
                 Rectangle door = getActiveDoor();
@@ -3665,6 +3770,42 @@ public class FirstScreen implements Screen {
             bounds.x += velocityX * delta;
             bounds.y += velocityY * delta;
             lifeTimer -= delta;
+        }
+    }
+
+    private static final class FloatingDamageText {
+        private final String value;
+        private final boolean critical;
+        private float x;
+        private float y;
+        private float timer = DAMAGE_TEXT_LIFETIME;
+        private final float driftX;
+
+        private FloatingDamageText(float x, float y, int damage, boolean critical, int index) {
+            this.x = x;
+            this.y = y;
+            this.value = Integer.toString(damage);
+            this.critical = critical;
+            this.driftX = ((index & 1) == 0 ? -1f : 1f) * (critical ? 16f : 10f);
+        }
+
+        private void update(float delta) {
+            timer = Math.max(0f, timer - delta);
+            float normalized = 1f - timer / DAMAGE_TEXT_LIFETIME;
+            x += driftX * delta;
+            y += (critical ? 78f : 60f) * delta + MathUtils.sin(normalized * MathUtils.PI) * 10f * delta;
+        }
+
+        private float getAlpha() {
+            return MathUtils.clamp(timer / DAMAGE_TEXT_LIFETIME, 0f, 1f);
+        }
+
+        private float getPop() {
+            return MathUtils.sin((1f - timer / DAMAGE_TEXT_LIFETIME) * MathUtils.PI);
+        }
+
+        private boolean isFinished() {
+            return timer <= 0f;
         }
     }
 

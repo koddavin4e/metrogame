@@ -10,9 +10,9 @@ public class Enemy {
     }
 
     public enum AttackStyle {
-        CLAW(46f, 1.0f, 0.20f, 1, 1.9f),
-        LUNGE(70f, 1.25f, 0.26f, 2, 2.6f),
-        HEAVY(58f, 1.7f, 0.36f, 4, 1.35f);
+        CLAW(46f, 1.28f, 0.20f, 1, 1.9f),
+        LUNGE(70f, 1.55f, 0.26f, 2, 2.6f),
+        HEAVY(58f, 2.05f, 0.36f, 4, 1.35f);
 
         private final float range;
         private final float cooldown;
